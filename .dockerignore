@@ -1,0 +1,14 @@
+.git
+node_modules
+android/.gradle
+android/app/build
+android/app/.cxx
+ios/Pods
+coverage
+.cache
+fixtures
+out
+
+# Keep the staged prover source in the build context.
+!vendor
+!vendor/vocdoni-passport-prover
