@@ -1,5 +1,7 @@
 package com.vocdonipassport.barretenberg;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -24,9 +26,9 @@ public class BarretenbergModule extends ReactContextBaseJavaModule {
 
     public BarretenbergModule(ReactApplicationContext ctx) {
         super(ctx);
-        // Set CRS download path to app's files directory
         if (nativeLoaded) {
             try {
+                configureRuntimeProfile(ctx);
                 File crsDir = new File(ctx.getFilesDir(), "bb-crs");
                 crsDir.mkdirs();
                 nativeSetCrsPath(crsDir.getAbsolutePath());
@@ -37,6 +39,28 @@ public class BarretenbergModule extends ReactContextBaseJavaModule {
     }
 
     @Override public String getName() { return "Barretenberg"; }
+
+    private void configureRuntimeProfile(Context ctx) {
+        long totalMemBytes = 0L;
+        int cpuCount = Runtime.getRuntime().availableProcessors();
+        try {
+            ActivityManager activityManager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+            if (activityManager != null) {
+                ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+                activityManager.getMemoryInfo(memoryInfo);
+                totalMemBytes = memoryInfo.totalMem;
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Could not read device memory: " + e.getMessage());
+        }
+
+        try {
+            nativeConfigureRuntime(totalMemBytes, cpuCount);
+            Log.i(TAG, "Configured native runtime for totalMemBytes=" + totalMemBytes + " cpuCount=" + cpuCount);
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to configure runtime profile: " + e.getMessage(), e);
+        }
+    }
 
     /**
      * Point native CRS_PATH at the directory that contains bn254_g1.dat / bn254_g2.dat / grumpkin_g1.flat.dat.
@@ -83,5 +107,6 @@ public class BarretenbergModule extends ReactContextBaseJavaModule {
     }
 
     private native void nativeSetCrsPath(String path);
+    private native void nativeConfigureRuntime(long totalMemBytes, int cpuCount);
     private native byte[] nativeBbapi(byte[] input);
 }

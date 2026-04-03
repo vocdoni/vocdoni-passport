@@ -45,6 +45,7 @@ import {
 
 const CHAIN_ID = 11155111;
 const CIRCUIT_VERSION = '0.16.0';
+const TIMING_TAG = '[ProofTiming]';
 
 type ProgressFn = (step: string, detail: string) => void;
 
@@ -84,6 +85,38 @@ const STARTUP_BASELINE_CIRCUITS = [
   'data_check_integrity_sa_sha256_dg_sha1',
 ] as const;
 
+type PreparedCircuitArtifact = {
+  packaged: any;
+  bytecode: Uint8Array;
+  vkey: Uint8Array;
+  vkeyFields: string[];
+  expectedPublicInputs: number;
+};
+
+const sessionManifestCache = new Map<string, any>();
+const sessionCertificatesCache = new Map<string, any>();
+const sessionPackagedCircuitCache = new Map<string, any>();
+const sessionPreparedCircuitCache = new Map<string, PreparedCircuitArtifact>();
+const sessionMerkleProofCache = new Map<string, { path: string[]; index: number }>();
+
+function logTiming(stage: string, startedAt: number, detail?: string): void {
+  const elapsedMs = Date.now() - startedAt;
+  const suffix = detail ? ` ${detail}` : '';
+  console.info(`${TIMING_TAG} ${stage} ${elapsedMs}ms${suffix}`);
+}
+
+async function timed<T>(stage: string, fn: () => Promise<T>, detail?: string): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await fn();
+    logTiming(stage, startedAt, detail);
+    return result;
+  } catch (error) {
+    logTiming(`${stage}.failed`, startedAt, detail);
+    throw error;
+  }
+}
+
 export async function generatePassportInnerProofPackage(pd: PassportData, onP: ProgressFn, requestQuery?: Query | null, requestService?: { scope?: string } | null): Promise<InnerProofPackage> {
   if (!isAcvmWitnessAvailable()) {
     throw new Error(
@@ -106,20 +139,12 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   onP('parse', `MRZ len=${passport.mrz.length}, TBS bucket=${tbsBucket}`);
 
   onP('registry', 'Circuit manifest (cache or network)...');
-  let manifest: any = await readCachedManifest(CIRCUIT_VERSION);
-  if (!manifest?.circuits || !manifest?.version) {
-    manifest = await registry.getCircuitManifest(undefined, { version: CIRCUIT_VERSION, validate: false });
-    await writeCachedManifest(CIRCUIT_VERSION, manifest);
-  }
+  const manifest = await timed('manifest.ensure', () => ensureManifest(registry), CIRCUIT_VERSION);
   onP('registry', `Manifest version ${manifest.version}, root ${manifest.root}`);
 
   onP('registry', 'Certificate registry (cache or network)...');
-  const certRoot = await registry.getLatestCertificateRoot();
-  let packagedCerts: any = await readCachedCertificates(certRoot);
-  if (!packagedCerts?.certificates?.length) {
-    packagedCerts = await registry.getCertificates(certRoot, { validate: false });
-    await writeCachedCertificates(certRoot, packagedCerts);
-  }
+  const certRoot = await timed('certificates.root', () => registry.getLatestCertificateRoot());
+  const packagedCerts = await timed('certificates.ensure', () => ensureCertificates(registry, certRoot), certRoot);
   onP('registry', `Certificates loaded: ${packagedCerts.certificates.length}`);
 
   const normalizedQuery = normalizeRequestQuery(requestQuery);
@@ -136,8 +161,19 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   onP('circuits', `Disclosure plans: ${disclosurePlans.map((p) => p.circuitName).join(', ')}`);
   onP('circuits', `Circuits: ${circuitNames.join(', ')}`);
 
+  onP('download', 'Warming circuit artifacts...');
+  await timed(
+    'circuits.prepare',
+    () => Promise.all(circuitNames.map((name) => ensurePreparedCircuit(registry, manifest, name))).then(() => undefined),
+    circuitNames.join(','),
+  );
+
   onP('download', 'Preparing CRS from manifest sizes...');
-  const crsDir = await ensureCrsFilesForCircuits(circuitNames.map((name) => Number(manifest.circuits?.[name]?.size || 0)), onP);
+  const crsDir = await timed(
+    'crs.ensure',
+    () => ensureCrsFilesForCircuits(circuitNames.map((name) => Number(manifest.circuits?.[name]?.size || 0)), onP),
+    `${circuitNames.length} circuits`,
+  );
   setBbCrsPath(crsDir);
 
   const saltDscIn = randomBigInt();
@@ -156,9 +192,15 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   const currentDateTimestamp = Math.floor(Date.now() / 1000);
 
   onP('inputs', 'Deriving real zkPassport circuit inputs...');
-  const dscInputs = await getDSCCircuitInputs(passport as any, saltDscIn, packagedCerts as any);
-  const idInputs = await getIDDataCircuitInputs(passport as any, saltDscIn, saltIdOut);
-  const integrityInputs = await getIntegrityCheckCircuitInputs(passport as any, saltIdOut, saltsOut as any);
+  const [dscInputs, idInputs, integrityInputs] = await timed(
+    'inputs.primary',
+    () => Promise.all([
+      getDSCCircuitInputs(passport as any, saltDscIn, packagedCerts as any),
+      getIDDataCircuitInputs(passport as any, saltDscIn, saltIdOut),
+      getIntegrityCheckCircuitInputs(passport as any, saltIdOut, saltsOut as any),
+    ]),
+    `${dscName},${idDataName},${integrityName}`,
+  );
 
   if (!dscInputs) throw new Error('Could not derive DSC inputs');
   if (!idInputs) throw new Error('Could not derive ID data inputs');
@@ -185,7 +227,11 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
     const plan = disclosurePlans[i];
     const step = 4 + i;
     onP('inputs', `Preparing ${plan.circuitName}...`);
-    const disclosureInputs = await plan.buildInputs(passport as any, saltsOut as any, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp);
+    const disclosureInputs = await timed(
+      `inputs.${plan.circuitName}`,
+      () => plan.buildInputs(passport as any, saltsOut as any, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp),
+      plan.circuitName,
+    );
     if (!disclosureInputs) throw new Error(`Could not derive inputs for ${plan.circuitName}`);
     onP('prove', `[${step}/${3 + disclosureCount}] ${plan.circuitName}`);
     const proof = await fetchAndProveInnerCircuit(registry, manifest, plan.circuitName, disclosureInputs, onP);
@@ -215,12 +261,12 @@ export async function preloadCoreProofAssets(onP: ProgressFn): Promise<void> {
   const registry = new RegistryClient({ chainId: CHAIN_ID });
 
   onP('startup', 'Loading circuit manifest...');
-  const manifest = await ensureManifest(registry);
+  const manifest = await timed('startup.manifest', () => ensureManifest(registry), CIRCUIT_VERSION);
   onP('startup', `Manifest ${manifest.version} ready`);
 
   onP('startup', 'Loading certificate registry...');
-  const certRoot = await registry.getLatestCertificateRoot();
-  const certs = await ensureCertificates(registry, certRoot);
+  const certRoot = await timed('startup.certificates.root', () => registry.getLatestCertificateRoot());
+  const certs = await timed('startup.certificates', () => ensureCertificates(registry, certRoot), certRoot);
   onP('startup', `Certificates ready (${certs.certificates?.length || 0})`);
 
   onP('startup', 'Caching common proof circuits...');
@@ -228,18 +274,18 @@ export async function preloadCoreProofAssets(onP: ProgressFn): Promise<void> {
   for (const name of STARTUP_BASELINE_CIRCUITS) {
     const size = Number(manifest?.circuits?.[name]?.size || 0);
     baselineSizes.push(size);
-    await ensurePackagedCircuit(registry, manifest, name);
+    await timed(`startup.circuit.${name}`, () => ensurePreparedCircuit(registry, manifest, name), name);
     onP('startup', `Cached ${name}`);
   }
 
   onP('startup', 'Preparing proving CRS...');
-  await ensureCrsFilesForCircuits(baselineSizes, onP);
+  await timed('startup.crs', () => ensureCrsFilesForCircuits(baselineSizes, onP), `${baselineSizes.length} circuits`);
   onP('startup', 'Device proof data is ready');
 }
 
 export async function preloadRequestProofAssets(requestQuery: Query | null | undefined, onP: ProgressFn): Promise<void> {
   const registry = new RegistryClient({ chainId: CHAIN_ID });
-  const manifest = await ensureManifest(registry);
+  const manifest = await timed('request.manifest', () => ensureManifest(registry), CIRCUIT_VERSION);
   const query = normalizeRequestQuery(requestQuery);
   const plans = buildDisclosurePlans(query);
   const sizes: number[] = [];
@@ -247,12 +293,12 @@ export async function preloadRequestProofAssets(requestQuery: Query | null | und
   for (const plan of plans) {
     const size = Number(manifest?.circuits?.[plan.circuitName]?.size || 0);
     sizes.push(size);
-    await ensurePackagedCircuit(registry, manifest, plan.circuitName);
+    await timed(`request.circuit.${plan.circuitName}`, () => ensurePreparedCircuit(registry, manifest, plan.circuitName), plan.circuitName);
     onP('startup', `Cached ${plan.circuitName}`);
   }
 
   if (sizes.length > 0) {
-    await ensureCrsFilesForCircuits(sizes, onP);
+    await timed('request.crs', () => ensureCrsFilesForCircuits(sizes, onP), `${sizes.length} circuits`);
   }
 }
 
@@ -260,80 +306,107 @@ async function fetchAndProveInnerCircuit(registry: RegistryClient, manifest: any
   const ch = manifest?.circuits?.[name]?.hash;
   if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
   onP('download', `Circuit ${name} (cache or network)...`);
-  let art: any = await ensurePackagedCircuit(registry, manifest, name);
+  const prepared = await timed(`circuit.ready.${name}`, () => ensurePreparedCircuit(registry, manifest, name), name);
   onP('download', `  ${name} OK`);
-  try {
-    return await proveInnerCircuit(name, art, inputs, manifest);
-  } finally {
-    art.bytecode = '';
-    art.vkey = '';
-  }
+  return await proveInnerCircuit(name, prepared, inputs, manifest);
 }
 
 async function ensureManifest(registry: RegistryClient): Promise<any> {
+  const memoized = sessionManifestCache.get(CIRCUIT_VERSION);
+  if (memoized?.circuits && memoized?.version) {
+    return memoized;
+  }
   let manifest: any = await readCachedManifest(CIRCUIT_VERSION);
   if (!manifest?.circuits || !manifest?.version) {
     manifest = await registry.getCircuitManifest(undefined, { version: CIRCUIT_VERSION, validate: false });
     await writeCachedManifest(CIRCUIT_VERSION, manifest);
   }
+  sessionManifestCache.set(CIRCUIT_VERSION, manifest);
   return manifest;
 }
 
 async function ensureCertificates(registry: RegistryClient, certRoot: string): Promise<any> {
+  const memoized = sessionCertificatesCache.get(certRoot);
+  if (memoized?.certificates?.length) {
+    return memoized;
+  }
   let packagedCerts: any = await readCachedCertificates(certRoot);
   if (!packagedCerts?.certificates?.length) {
     packagedCerts = await registry.getCertificates(certRoot, { validate: false });
     await writeCachedCertificates(certRoot, packagedCerts);
   }
+  sessionCertificatesCache.set(certRoot, packagedCerts);
   return packagedCerts;
 }
 
 async function ensurePackagedCircuit(registry: RegistryClient, manifest: any, name: string): Promise<any> {
   const ch = manifest?.circuits?.[name]?.hash;
   if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
+  const cached = sessionPackagedCircuitCache.get(String(ch));
+  if (cached?.bytecode && cached?.vkey) {
+    return cached;
+  }
   let art: any = await readCachedPackagedCircuit(String(ch));
   if (!art?.bytecode || !art?.vkey) {
     art = await registry.getPackagedCircuit(name, manifest, { validate: false });
     await writeCachedPackagedCircuit(String(ch), art);
   }
+  sessionPackagedCircuitCache.set(String(ch), art);
   return art;
 }
 
-async function proveInnerCircuit(name: string, art: any, inputs: Record<string, any>, manifest: any): Promise<OuterCircuitProof> {
-  const raw = await proveRawCircuit(name, art, inputs);
+async function ensurePreparedCircuit(registry: RegistryClient, manifest: any, name: string): Promise<PreparedCircuitArtifact> {
+  const ch = String(manifest?.circuits?.[name]?.hash || '');
+  if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
+  const cached = sessionPreparedCircuitCache.get(ch);
+  if (cached) {
+    return cached;
+  }
+
+  const art = await ensurePackagedCircuit(registry, manifest, name);
+  const prepared = await timed(`circuit.decode.${name}`, async () => {
+    const bytecode = decompressBytecode(new Uint8Array(Buffer.from(art.bytecode, 'base64')));
+    const vkey = new Uint8Array(Buffer.from(art.vkey, 'base64'));
+    return {
+      packaged: art,
+      bytecode,
+      vkey,
+      vkeyFields: ultraVkToFields(vkey),
+      expectedPublicInputs: getNumberOfPublicInputsFromVkey(vkey),
+    };
+  }, name);
+  sessionPreparedCircuitCache.set(ch, prepared);
+  return prepared;
+}
+
+async function proveInnerCircuit(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>, manifest: any): Promise<OuterCircuitProof> {
+  const raw = await proveRawCircuit(name, prepared, inputs);
   const tree = await computeCircuitMerkleProofForName(manifest, name);
   return {
     proof: raw.proof,
     publicInputs: raw.publicInputs,
-    vkey: ultraVkToFields(new Uint8Array(Buffer.from(art.vkey, 'base64'))),
-    keyHash: art.vkey_hash,
+    vkey: prepared.vkeyFields,
+    keyHash: prepared.packaged.vkey_hash,
     treeHashPath: tree.path,
     treeIndex: String(tree.index),
   };
 }
 
-async function proveRawCircuit(name: string, art: any, inputs: Record<string, any>): Promise<{ proof: string[]; publicInputs: string[] }> {
-  let bytecode: Uint8Array | undefined;
-  let vkey: Uint8Array | undefined;
+async function proveRawCircuit(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>): Promise<{ proof: string[]; publicInputs: string[] }> {
   let witness: Uint8Array | undefined;
   try {
-    bytecode = decompressBytecode(new Uint8Array(Buffer.from(art.bytecode, 'base64')));
-    vkey = new Uint8Array(Buffer.from(art.vkey, 'base64'));
-    // ACVM `Program::deserialize_program` expects base64(gzip(program_serialization)); do not strip gzip
-    // (Barretenberg `circuitProve` uses ungzipped bytecode via `decompressBytecode` above).
-    witness = await solveCompressedWitness({
-      bytecode: art.bytecode,
-      abi: art.abi,
-      debug_symbols: art.debug_symbols ?? '',
-      file_map: art.file_map && typeof art.file_map === 'object' ? art.file_map : {},
+    witness = await timed(`witness.${name}`, () => solveCompressedWitness({
+      bytecode: prepared.packaged.bytecode,
+      abi: prepared.packaged.abi,
+      debug_symbols: prepared.packaged.debug_symbols ?? '',
+      file_map: prepared.packaged.file_map && typeof prepared.packaged.file_map === 'object' ? prepared.packaged.file_map : {},
       inputs,
-    });
-    const result = await circuitProve(bytecode, witness, vkey, name);
+    }), name);
+    const result = await timed(`prove.${name}`, () => circuitProve(prepared.bytecode, witness!, prepared.vkey, name), name);
     const proof = (result.proof || []).map(toFieldHex);
     const publicInputs = (result.public_inputs || []).map(toFieldHex);
-    const expectedPis = getNumberOfPublicInputsFromVkey(vkey);
-    if (expectedPis !== publicInputs.length) {
-      console.warn(`${name}: vkey public inputs=${expectedPis}, actual=${publicInputs.length}`);
+    if (prepared.expectedPublicInputs !== publicInputs.length) {
+      console.warn(`${name}: vkey public inputs=${prepared.expectedPublicInputs}, actual=${publicInputs.length}`);
     }
     return { proof, publicInputs };
   } catch (err: any) {
@@ -342,8 +415,6 @@ async function proveRawCircuit(name: string, art: any, inputs: Record<string, an
     if (err?.stack) console.error(err.stack);
     throw new Error(`${name} failed: ${msg}`);
   } finally {
-    if (bytecode) bytecode = new Uint8Array(0);
-    if (vkey) vkey = new Uint8Array(0);
     if (witness) witness = new Uint8Array(0);
   }
 }
@@ -351,11 +422,17 @@ async function proveRawCircuit(name: string, art: any, inputs: Record<string, an
 async function computeCircuitMerkleProofForName(manifest: any, name: string): Promise<{ path: string[]; index: number }> {
   const circuitHash = manifest.circuits?.[name]?.hash;
   if (!circuitHash) throw new Error(`Circuit ${name} not found in manifest`);
-  const proof = await getCircuitMerkleProof(circuitHash, manifest);
-  return {
+  const cached = sessionMerkleProofCache.get(String(circuitHash));
+  if (cached) {
+    return cached;
+  }
+  const proof = await timed(`merkle.${name}`, () => getCircuitMerkleProof(circuitHash, manifest), name);
+  const normalized = {
     path: proof.path.map((x: any) => (typeof x === 'string' ? x : `0x${BigInt(x).toString(16).padStart(64, '0')}`)),
     index: proof.index,
   };
+  sessionMerkleProofCache.set(String(circuitHash), normalized);
+  return normalized;
 }
 
 function toFieldHex(value: any): string {
