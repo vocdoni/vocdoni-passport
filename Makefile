@@ -15,12 +15,13 @@ OUT_DIR := out/apk
 VENDOR_PROVER_DIR := vendor/vocdoni-passport-prover
 APK_PATH := $(OUT_DIR)/app-release.apk
 
-.PHONY: help prepare prepare-prover-source apk apk-install apk-reset apk-clean-install fixture-pull
+.PHONY: help prepare prepare-prover-source apk aab apk-install apk-reset apk-clean-install fixture-pull
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
-		'  make apk               Build the Android release APK' \
+		'  make apk               Build the Android release APK (optimized, arm64 only)' \
+		'  make aab               Build Android App Bundle (for Play Store)' \
 		'  make apk-install       Install the built APK with host adb' \
 		'  make apk-reset         Clear app storage and stop the app on the device' \
 		'  make apk-clean-install Build, install, and reset app storage' \
@@ -64,6 +65,20 @@ apk: prepare-prover-source
 	$(DOCKER) cp apk-extract:/out/app-release.apk "$(APK_PATH)"
 	$(DOCKER) rm -f apk-extract
 	@printf 'APK ready:\n%s\n' '$(APK_PATH)'
+	@ls -lh "$(APK_PATH)"
+
+aab: prepare-prover-source
+	$(DOCKER) build \
+		-f docker/apk.Dockerfile \
+		--build-arg GRADLE_TASK=bundleRelease \
+		-t $(APK_IMAGE) \
+		.
+	$(DOCKER) create --name apk-extract $(APK_IMAGE) 2>/dev/null || \
+		($(DOCKER) rm -f apk-extract && $(DOCKER) create --name apk-extract $(APK_IMAGE))
+	$(DOCKER) cp apk-extract:/out/app-release.aab "$(OUT_DIR)/app-release.aab" 2>/dev/null || true
+	$(DOCKER) rm -f apk-extract
+	@printf 'AAB ready:\n%s\n' '$(OUT_DIR)/app-release.aab'
+	@ls -lh "$(OUT_DIR)/app-release.aab" 2>/dev/null || true
 
 apk-install:
 	test -f "$(APK_PATH)"

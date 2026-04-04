@@ -97,6 +97,22 @@ export async function pingServerHealth(baseUrl: string): Promise<ServerHealthSta
   };
 }
 
+export class DuplicateSignatureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DuplicateSignatureError';
+  }
+}
+
+export class ServerError extends Error {
+  public statusCode: number;
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = 'ServerError';
+    this.statusCode = statusCode;
+  }
+}
+
 export async function aggregateProofOnServer(baseUrl: string, inner: InnerProofPackage, request?: ProofRequestPayload | null): Promise<ProofResult> {
   const url = normalizeAggregateUrl(baseUrl);
   const resp = await fetch(url, {
@@ -107,10 +123,15 @@ export async function aggregateProofOnServer(baseUrl: string, inner: InnerProofP
   const text = await resp.text();
   let body: any = {};
   try { body = text ? JSON.parse(text) : {}; } catch {
-    throw new Error(`Server returned non-JSON response (${resp.status}): ${text.slice(0, 300)}`);
+    throw new ServerError(`Server returned non-JSON response (${resp.status}): ${text.slice(0, 300)}`, resp.status);
   }
   if (!resp.ok) {
-    throw new Error(body?.error || body?.message || `Aggregation failed (${resp.status})`);
+    const errorMsg = body?.error || body?.message || `Aggregation failed (${resp.status})`;
+    // Check for duplicate signature (HTTP 409 Conflict)
+    if (resp.status === 409 || errorMsg.toLowerCase().includes('already exists') || errorMsg.toLowerCase().includes('duplicate')) {
+      throw new DuplicateSignatureError(errorMsg);
+    }
+    throw new ServerError(errorMsg, resp.status);
   }
   return body as ProofResult;
 }

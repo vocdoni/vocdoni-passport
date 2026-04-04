@@ -134,7 +134,15 @@ RUN mkdir -p android/app/src/main/jniLibs/arm64-v8a && \
     cp /tmp/vocdoni-passport-prover/target/aarch64-linux-android/release/libacvm_witness_jni.so \
         android/app/src/main/jniLibs/arm64-v8a/libacvm_witness_jni.so && \
     cp /tmp/vocdoni-passport-prover/target/x86_64-linux-android/release/libacvm_witness_jni.so \
-        android/app/src/main/jniLibs/x86_64/libacvm_witness_jni.so
+        android/app/src/main/jniLibs/x86_64/libacvm_witness_jni.so && \
+    # Strip debug symbols from native libraries to reduce size
+    $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+        android/app/src/main/jniLibs/arm64-v8a/*.so && \
+    $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+        android/app/src/main/jniLibs/x86_64/*.so && \
+    # Show sizes after stripping
+    ls -lh android/app/src/main/jniLibs/arm64-v8a/ && \
+    ls -lh android/app/src/main/jniLibs/x86_64/
 
 WORKDIR /app/VocdoniPassport/android
 RUN ./gradlew ${GRADLE_TASK} --no-daemon \
@@ -142,4 +150,5 @@ RUN ./gradlew ${GRADLE_TASK} --no-daemon \
     ${GRADLE_EXTRA_ARGS}
 
 RUN mkdir -p /out && \
-    find app/build/outputs -name "*.apk" -exec cp {} /out/ \;
+    find app/build/outputs -name "*.apk" -exec cp {} /out/ \; && \
+    find app/build/outputs -name "*.aab" -exec cp {} /out/ \; || true
