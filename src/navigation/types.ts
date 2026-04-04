@@ -8,6 +8,14 @@ export type TabParamList = {
   IDs: undefined;
   Scanner: undefined;
   History: undefined;
+  Wallet: undefined;
+};
+
+export type WalletStackParamList = {
+  WalletSetupChoice: undefined;
+  WalletCreate: undefined;
+  WalletRestore: undefined;
+  WalletSetupComplete: undefined;
 };
 
 export type IDsStackParamList = {
@@ -57,6 +65,7 @@ export type SigningStackParamList = {
 
 export type RootStackParamList = {
   Boot: undefined;
+  WalletSetup: NavigatorScreenParams<WalletStackParamList>;
   Main: NavigatorScreenParams<TabParamList>;
   Signing: NavigatorScreenParams<SigningStackParamList>;
   AuthLock: undefined;
@@ -79,6 +88,9 @@ export type SigningStackScreenProps<T extends keyof SigningStackParamList> =
 
 export type HistoryStackScreenProps<T extends keyof HistoryStackParamList> =
   NativeStackScreenProps<HistoryStackParamList, T>;
+
+export type WalletStackScreenProps<T extends keyof WalletStackParamList> =
+  NativeStackScreenProps<WalletStackParamList, T>;
 
 declare global {
   namespace ReactNavigation {

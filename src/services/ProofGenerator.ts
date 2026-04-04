@@ -7,6 +7,7 @@ import {
   SOD,
   extractTBS,
   getAgeCircuitInputs,
+  getBindCircuitInputs,
   getCscaForPassportAsync,
   getDSCCircuitInputs,
   getDSCSignatureHashAlgorithm,
@@ -32,6 +33,7 @@ import {
   processSodSignature,
   DG1_INPUT_SIZE,
   type Query,
+  type BoundData,
 } from '@zkpassport/utils';
 
 import { Platform } from 'react-native';
@@ -161,7 +163,11 @@ async function timed<T>(stage: string, fn: () => Promise<T>, detail?: string): P
   }
 }
 
-export async function generatePassportInnerProofPackage(pd: PassportData, onP: ProgressFn, requestQuery?: Query | null, requestService?: { scope?: string } | null): Promise<InnerProofPackage> {
+export interface ProofOptions {
+  walletAddress?: string;
+}
+
+export async function generatePassportInnerProofPackage(pd: PassportData, onP: ProgressFn, requestQuery?: Query | null, requestService?: { scope?: string } | null, options?: ProofOptions): Promise<InnerProofPackage> {
   if (!isAcvmWitnessAvailable()) {
     throw new Error(
       'On-device witness solving requires the AcvmWitness native module (Rust acvm_witness_jni in vocdoni-passport-prover/crates/acvm-witness-jni).',
@@ -192,7 +198,8 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   onP('registry', `Certificates loaded: ${packagedCerts.certificates.length}`);
 
   const normalizedQuery = normalizeRequestQuery(requestQuery);
-  const disclosurePlans = buildDisclosurePlans(normalizedQuery);
+  const walletAddress = options?.walletAddress;
+  const disclosurePlans = buildDisclosurePlans(normalizedQuery, walletAddress);
   const disclosureCount = disclosurePlans.length;
   const outerName = `outer_evm_count_${3 + disclosureCount}`;
   const { dscName, idDataName, integrityName, debug } = await deriveCircuitNames(passport, packagedCerts, manifest, outerName);
@@ -718,7 +725,7 @@ async function getExtendedDiscloseCircuitInputs(
   }
 }
 
-function buildDisclosurePlans(query: ExtendedQuery): DisclosurePlan[] {
+function buildDisclosurePlans(query: ExtendedQuery, walletAddress?: string): DisclosurePlan[] {
   const plans: DisclosurePlan[] = [];
   const hasDiscloseBytes = Object.entries(query as any).some(([, cfg]: any) => cfg?.disclose || cfg?.eq);
   if (hasDiscloseBytes) {
@@ -761,6 +768,18 @@ function buildDisclosurePlans(query: ExtendedQuery): DisclosurePlan[] {
       circuitName: 'exclusion_check_issuing_country_evm',
       buildInputs: (passport, saltsOut, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp) =>
         getIssuingCountryExclusionCircuitInputs(passport, query as Query, saltsOut, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp) as Promise<any>,
+    });
+  }
+  // Add bind circuit if wallet address is provided
+  if (walletAddress) {
+    const bindQuery: Query = {
+      ...query as Query,
+      bind: { user_address: walletAddress } as BoundData,
+    };
+    plans.push({
+      circuitName: 'bind_evm',
+      buildInputs: (passport, saltsOut, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp) =>
+        getBindCircuitInputs(passport, bindQuery, saltsOut, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp) as Promise<any>,
     });
   }
   if (plans.length === 0) {

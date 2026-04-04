@@ -13,6 +13,7 @@ import { AddIDSuccessScreen } from '../screens/ids/AddIDFlow/SuccessScreen';
 import { ExploreMrzScreen, ExploreNfcScreen, ExploreResultScreen } from '../screens/ids/ExploreIDFlow';
 import { ScannerScreen } from '../screens/scanner/ScannerScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
+import { WalletScreen } from '../screens/wallet';
 
 import { colors, borderRadius } from '../components/common/styles';
 import type { TabParamList, IDsStackParamList, HistoryStackParamList } from './types';
@@ -72,10 +73,13 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         
         if (route.name === 'Scanner') {
           icon = '📷';
-          label = 'Scan QR & Sign';
+          label = 'Scan & Sign';
         } else if (route.name === 'History') {
           icon = '📜';
           label = 'History';
+        } else if (route.name === 'Wallet') {
+          icon = '🔐';
+          label = 'Identity';
         }
 
         const isCenter = route.name === 'Scanner';
@@ -119,6 +123,7 @@ export function TabNavigator() {
       <Tab.Screen name="IDs" component={IDsStackNavigator} />
       <Tab.Screen name="Scanner" component={ScannerScreen} />
       <Tab.Screen name="History" component={HistoryStackNavigator} />
+      <Tab.Screen name="Wallet" component={WalletScreen} />
     </Tab.Navigator>
   );
 }

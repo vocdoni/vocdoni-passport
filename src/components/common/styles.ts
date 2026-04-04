@@ -25,6 +25,7 @@ export const colors = {
   
   warning: '#dc6803',
   warningLight: '#fef4e6',
+  warningDark: '#b45309',
   
   border: '#e4ebf8',
   borderLight: '#d7e1f1',

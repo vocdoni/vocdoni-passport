@@ -1,3 +1,7 @@
+// Polyfills must be imported first
+import 'react-native-get-random-values';
+import 'text-encoding-polyfill';
+
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { StatusBar, View, StyleSheet, Platform, BackHandler } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
@@ -5,13 +9,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Buffer } from 'buffer';
 
-import 'text-encoding-polyfill';
-
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { SigningNavigator } from './src/navigation/SigningNavigator';
+import { WalletSetupNavigator } from './src/navigation/WalletSetupNavigator';
 import { BootScreen } from './src/screens/BootScreen';
 import { AuthLockScreen } from './src/screens/AuthLockScreen';
 import { useAuth } from './src/hooks/useAuth';
+import { WalletProvider, useWallet } from './src/contexts/WalletContext';
 import { colors } from './src/components/common/styles';
 import type { RootStackParamList } from './src/navigation/types';
 
@@ -21,9 +25,13 @@ if (typeof global.Buffer === 'undefined') {
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-function RootNavigator() {
+function RootNavigator({ needsWalletSetup }: { needsWalletSetup: boolean }) {
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator 
+      screenOptions={{ headerShown: false }}
+      initialRouteName={needsWalletSetup ? 'WalletSetup' : 'Main'}
+    >
+      <RootStack.Screen name="WalletSetup" component={WalletSetupNavigator} />
       <RootStack.Screen name="Main" component={TabNavigator} />
       <RootStack.Screen
         name="Signing"
@@ -37,9 +45,10 @@ function RootNavigator() {
   );
 }
 
-export default function App() {
+function AppContent() {
   const [bootReady, setBootReady] = useState(false);
   const { status, biometricsAvailable, authenticate, refreshAuthState } = useAuth();
+  const { status: walletStatus } = useWallet();
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
 
   useEffect(() => {
@@ -79,37 +88,49 @@ export default function App() {
 
   if (!bootReady) {
     return (
-      <GestureHandlerRootView style={styles.root}>
+      <>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <BootScreen onReady={handleBootComplete} />
-      </GestureHandlerRootView>
+      </>
     );
   }
 
-  if (status === 'checking') {
+  if (status === 'checking' || walletStatus === 'checking') {
     return (
-      <GestureHandlerRootView style={styles.root}>
+      <>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <View style={styles.loading} />
-      </GestureHandlerRootView>
+      </>
     );
   }
 
   if (status === 'locked') {
     return (
-      <GestureHandlerRootView style={styles.root}>
+      <>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <AuthLockScreen onUnlock={handleUnlock} biometricsAvailable={biometricsAvailable} />
-      </GestureHandlerRootView>
+      </>
     );
   }
 
+  const needsWalletSetup = walletStatus === 'no_wallet';
+
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
+        <RootNavigator needsWalletSetup={needsWalletSetup} />
       </NavigationContainer>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <GestureHandlerRootView style={styles.root}>
+      <WalletProvider>
+        <AppContent />
+      </WalletProvider>
     </GestureHandlerRootView>
   );
 }

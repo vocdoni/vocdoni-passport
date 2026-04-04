@@ -22,6 +22,7 @@ import {
   generatePassportInnerProofPackage,
 } from '../../services/ProofGenerator';
 import { aggregateProofOnServer, DuplicateSignatureError } from '../../services/ServerClient';
+import { useWallet } from '../../contexts/WalletContext';
 import type { SigningStackParamList } from '../../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -67,6 +68,7 @@ export function ProofProgressScreen() {
   const route = useRoute<RouteType>();
   const insets = useSafeAreaInsets();
   const { request, selectedIdRef } = route.params;
+  const { address: walletAddress } = useWallet();
 
   const [steps, setSteps] = useState<Step[]>(() =>
     STEPS.map((s) => ({ ...s, status: 'pending' })),
@@ -194,6 +196,9 @@ export function ProofProgressScreen() {
 
     try {
       addLog('info', 'Generating inner proof package...');
+      if (walletAddress) {
+        addLog('info', `Binding wallet address: ${walletAddress.slice(0, 10)}...${walletAddress.slice(-8)}`);
+      }
       const inner = await generatePassportInnerProofPackage(
         { dg1: storedId.dg1, sod: storedId.sod, dg2: storedId.dg2 },
         (phase, detail) => {
@@ -209,6 +214,7 @@ export function ProofProgressScreen() {
         },
         request.query,
         request.service,
+        { walletAddress: walletAddress || undefined },
       );
 
       updateStep('compute', 'completed');
