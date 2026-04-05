@@ -210,17 +210,6 @@ jobs:
           git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
             ${{ env.PROVER_REPO_URL }} ../vocdoni-passport-prover
 
-      # hashFiles() only sees the workspace; ../vocdoni-passport-prover is outside it.
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: ../vocdoni-passport-prover/target
-          key: ${{ runner.os }}-rust-ios-release-${{ env.PROVER_REPO_REF }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-rust-ios-release-${{ env.PROVER_REPO_REF }}-
-            ${{ runner.os }}-rust-ios-release-
-            ${{ runner.os }}-rust-ios-
-
       - name: Select Xcode version
         run: |
           XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
