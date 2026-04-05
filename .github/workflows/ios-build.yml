@@ -49,7 +49,6 @@ env:
   NODE_VERSION: "20"
 
 jobs:
-  # Run tests first (fast feedback) - reuse from a shared job
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -72,15 +71,14 @@ jobs:
         run: npm run typecheck
 
       - name: Run linter
-        run: npm run lint || true
+        run: npm run lint
 
       - name: Run tests
         run: npm test -- --passWithNoTests
 
-  # Build iOS app
   build-ios:
     name: Build iOS App
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     needs: test
 
@@ -100,6 +98,9 @@ jobs:
           ruby-version: "3.2"
           bundler-cache: true
 
+      - name: Install xcpretty
+        run: gem install xcpretty --no-document
+
       - name: Cache Rust toolchain
         uses: actions/cache@v4
         with:
@@ -112,15 +113,16 @@ jobs:
 
       - name: Install Rust toolchain
         run: |
-          if ! command -v rustc &> /dev/null || [ "$(rustc --version | cut -d' ' -f2)" != "${{ env.RUST_VERSION }}" ]; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-              --default-toolchain ${{ env.RUST_VERSION }} \
-              --profile minimal
-          fi
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+            --default-toolchain ${{ env.RUST_VERSION }} \
+            --profile minimal
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source "$HOME/.cargo/env"
+          rustc --version
 
       - name: Add iOS Rust targets
         run: |
+          source "$HOME/.cargo/env"
           rustup target add aarch64-apple-ios
           rustup target add aarch64-apple-ios-sim
           rustup target add x86_64-apple-ios
@@ -131,7 +133,7 @@ jobs:
           path: |
             ios/Pods
             ~/Library/Caches/CocoaPods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile') }}
           restore-keys: |
             ${{ runner.os }}-pods-
 
@@ -166,6 +168,7 @@ jobs:
       - name: Pre-build ACVM Witness library
         working-directory: ../vocdoni-passport-prover/crates/acvm-witness-jni
         run: |
+          source "$HOME/.cargo/env"
           echo "=== Building for iOS Simulator (arm64) ==="
           cargo build --release --target aarch64-apple-ios-sim
 
@@ -180,8 +183,9 @@ jobs:
         working-directory: ios
         run: pod install --repo-update
 
+      # workflow_dispatch inputs.* is empty on push/PR — use github.event.inputs explicitly
       - name: Build iOS app (Development)
-        if: inputs.build_type != 'release'
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type != 'release' }}
         working-directory: ios
         run: |
           set -o pipefail
@@ -191,32 +195,33 @@ jobs:
             -scheme VocdoniPassport \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | xcpretty --color || {
-              echo "=== Build failed. Last 100 lines of log: ==="
-              tail -100 "$RUNNER_TEMP/xcodebuild.log"
+              echo "=== Build failed. Last 120 lines of log: ==="
+              tail -120 "$RUNNER_TEMP/xcodebuild.log"
               exit 1
             }
 
-          # Find and prepare the .app bundle for artifact upload
           APP_PATH=$(find "$RUNNER_TEMP/DerivedData" -name "*.app" -type d | head -1)
           if [ -n "$APP_PATH" ]; then
             echo "App bundle: $APP_PATH"
             mkdir -p "$RUNNER_TEMP/artifacts"
             cp -R "$APP_PATH" "$RUNNER_TEMP/artifacts/"
-            
-            # Create a zip for easier download
             cd "$RUNNER_TEMP/artifacts"
             zip -r VocdoniPassport-iOS-Simulator.zip "$(basename "$APP_PATH")"
+          else
+            echo "::error::No .app bundle found under DerivedData"
+            find "$RUNNER_TEMP/DerivedData" -type d -maxdepth 6 | head -50
+            exit 1
           fi
 
       - name: Setup code signing
-        if: inputs.build_type == 'release'
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
         env:
           CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
@@ -225,12 +230,6 @@ jobs:
         run: |
           if [ -z "$CERTIFICATE_BASE64" ]; then
             echo "::error::Release build requires code signing secrets."
-            echo "Please configure the following repository secrets:"
-            echo "  - IOS_DISTRIBUTION_CERTIFICATE_BASE64"
-            echo "  - IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"
-            echo "  - IOS_PROVISIONING_PROFILE_BASE64"
-            echo "  - KEYCHAIN_PASSWORD"
-            echo "  - APPLE_TEAM_ID"
             exit 1
           fi
 
@@ -255,10 +254,8 @@ jobs:
           PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID.mobileprovision"
 
-          echo "Code signing configured successfully"
-
       - name: Build iOS app (Release)
-        if: inputs.build_type == 'release'
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
         working-directory: ios
         run: |
           set -o pipefail
@@ -271,13 +268,13 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             archive \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | xcpretty --color || {
-              echo "=== Build failed. Last 100 lines of log: ==="
-              tail -100 "$RUNNER_TEMP/xcodebuild.log"
+              echo "=== Build failed. Last 120 lines of log: ==="
+              tail -120 "$RUNNER_TEMP/xcodebuild.log"
               exit 1
             }
 
       - name: Export IPA
-        if: inputs.build_type == 'release'
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
@@ -312,7 +309,7 @@ jobs:
           cp "$RUNNER_TEMP/export/"*.ipa "$RUNNER_TEMP/artifacts/"
 
       - name: Upload to TestFlight
-        if: inputs.build_type == 'release' && inputs.upload_testflight == true
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' && (github.event.inputs.upload_testflight == true || github.event.inputs.upload_testflight == 'true') }}
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
@@ -336,7 +333,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: VocdoniPassport-iOS-${{ inputs.build_type || 'development' }}
+          name: VocdoniPassport-iOS-${{ github.event.inputs.build_type == 'release' && 'release' || 'development' }}
           path: |
             ${{ runner.temp }}/artifacts/*.zip
             ${{ runner.temp }}/artifacts/*.ipa

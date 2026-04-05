@@ -149,7 +149,7 @@ jobs:
   # Build iOS app (development build for simulator)
   build-ios:
     name: Build iOS App
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     needs: [prepare, test]
 
@@ -169,6 +169,9 @@ jobs:
           ruby-version: "3.2"
           bundler-cache: true
 
+      - name: Install xcpretty
+        run: gem install xcpretty --no-document
+
       - name: Cache Rust toolchain
         uses: actions/cache@v4
         with:
@@ -181,14 +184,16 @@ jobs:
 
       - name: Install Rust toolchain
         run: |
-          if ! command -v rustc &> /dev/null; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-              --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
-          fi
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+            --default-toolchain ${{ env.RUST_VERSION }} \
+            --profile minimal
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source "$HOME/.cargo/env"
+          rustc --version
 
       - name: Add iOS Rust targets
         run: |
+          source "$HOME/.cargo/env"
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 
       - name: Cache CocoaPods
@@ -197,7 +202,7 @@ jobs:
           path: |
             ios/Pods
             ~/Library/Caches/CocoaPods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile') }}
           restore-keys: ${{ runner.os }}-pods-
 
       - name: Clone vocdoni-passport-prover
@@ -225,6 +230,7 @@ jobs:
       - name: Build ACVM Witness library
         working-directory: ../vocdoni-passport-prover/crates/acvm-witness-jni
         run: |
+          source "$HOME/.cargo/env"
           cargo build --release --target aarch64-apple-ios-sim
           cargo build --release --target aarch64-apple-ios
 
@@ -236,25 +242,32 @@ jobs:
         working-directory: ios
         run: |
           set -o pipefail
-          
+
           xcodebuild \
             -workspace VocdoniPassport.xcworkspace \
             -scheme VocdoniPassport \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build \
-            2>&1 | xcpretty --color
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | xcpretty --color || {
+              echo "=== Build failed. Last 120 lines of log: ==="
+              tail -120 "$RUNNER_TEMP/xcodebuild.log"
+              exit 1
+            }
 
-          # Package the .app bundle
           APP_PATH=$(find "$RUNNER_TEMP/DerivedData" -name "*.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app bundle found under DerivedData"
+            exit 1
+          fi
           VERSION="${{ needs.prepare.outputs.version }}"
           mkdir -p "$RUNNER_TEMP/artifacts"
-          
+
           cd "$(dirname "$APP_PATH")"
           zip -r "$RUNNER_TEMP/artifacts/VocdoniPassport-iOS-Simulator-${VERSION}.zip" "$(basename "$APP_PATH")"
 
