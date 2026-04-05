@@ -10,7 +10,7 @@ Privacy-preserving identity verification using zkPassport and zero-knowledge pro
 ## Continuous integration
 
 - **CI** runs TypeScript checks, ESLint, and Jest on every push (Ubuntu, GitHub-hosted).
-- **Android image build** is Docker-heavy and runs on a **[self-hosted](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners) Linux runner** with Docker. Add a repository runner so `Android Build` and release APK jobs can complete.
+- **Android image build** is Docker-heavy and uses `runs-on: [self-hosted, linux, X64]` (GitHub’s default labels for a Linux x64 self-hosted runner). The machine must have Docker. Register it under **Settings → Actions → Runners** for this repository.
 - **iOS build** uses GitHub-hosted `macOS` runners.
 
 ## Overview

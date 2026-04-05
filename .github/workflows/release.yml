@@ -82,7 +82,7 @@ jobs:
   # Build Android APK (heavy Docker build — use self-hosted runner with Docker)
   build-android:
     name: Build Android APK
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, linux, X64]
     timeout-minutes: 180
     needs: [prepare, test]
 

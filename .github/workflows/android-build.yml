@@ -1,7 +1,7 @@
 # Android Build Workflow for VocdoniPassport
 #
-# The Docker image build is heavy; it runs on self-hosted runners.
-# Ensure a Linux self-hosted runner with Docker is registered for this repository.
+# Runs on repository self-hosted runners (Linux x64 with Docker for the image build).
+# Required runner labels: self-hosted, linux, X64
 #
 # Outputs:
 #   - APK artifact downloadable from the workflow run
@@ -47,7 +47,7 @@ jobs:
   # Run tests first (fast feedback)
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64]
     timeout-minutes: 10
 
     steps:
@@ -75,7 +75,7 @@ jobs:
   # Build Android APK/AAB
   build-android:
     name: Build Android App
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, linux, X64]
     timeout-minutes: 180
     needs: test
 
