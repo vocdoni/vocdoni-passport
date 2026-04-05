@@ -97,14 +97,17 @@ jobs:
       - name: Prepare prover source
         run: |
           mkdir -p vendor/vocdoni-passport-prover
+          rm -rf vendor/vocdoni-passport-prover/*
+          PROVER_TMP_DIR=$(mktemp -d /tmp/vocdoni-passport-prover.XXXXXX)
+          trap 'rm -rf "$PROVER_TMP_DIR"' EXIT
 
           git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
             ${{ env.PROVER_REPO_URL }} \
-            /tmp/vocdoni-passport-prover
+            "$PROVER_TMP_DIR"
 
-          cp /tmp/vocdoni-passport-prover/Cargo.toml vendor/vocdoni-passport-prover/
-          cp /tmp/vocdoni-passport-prover/Cargo.lock vendor/vocdoni-passport-prover/
-          cp -R /tmp/vocdoni-passport-prover/crates vendor/vocdoni-passport-prover/
+          cp "$PROVER_TMP_DIR/Cargo.toml" vendor/vocdoni-passport-prover/
+          cp "$PROVER_TMP_DIR/Cargo.lock" vendor/vocdoni-passport-prover/
+          cp -R "$PROVER_TMP_DIR/crates" vendor/vocdoni-passport-prover/
 
       - name: Determine build task
         id: build-task

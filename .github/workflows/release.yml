@@ -105,11 +105,15 @@ jobs:
       - name: Prepare prover source
         run: |
           mkdir -p vendor/vocdoni-passport-prover
+          rm -rf vendor/vocdoni-passport-prover/*
+          PROVER_TMP_DIR=$(mktemp -d /tmp/vocdoni-passport-prover.XXXXXX)
+          trap 'rm -rf "$PROVER_TMP_DIR"' EXIT
+
           git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
-            ${{ env.PROVER_REPO_URL }} /tmp/vocdoni-passport-prover
-          cp /tmp/vocdoni-passport-prover/Cargo.toml vendor/vocdoni-passport-prover/
-          cp /tmp/vocdoni-passport-prover/Cargo.lock vendor/vocdoni-passport-prover/
-          cp -R /tmp/vocdoni-passport-prover/crates vendor/vocdoni-passport-prover/
+            ${{ env.PROVER_REPO_URL }} "$PROVER_TMP_DIR"
+          cp "$PROVER_TMP_DIR/Cargo.toml" vendor/vocdoni-passport-prover/
+          cp "$PROVER_TMP_DIR/Cargo.lock" vendor/vocdoni-passport-prover/
+          cp -R "$PROVER_TMP_DIR/crates" vendor/vocdoni-passport-prover/
 
       - name: Build Android APK
         uses: docker/build-push-action@v5
@@ -194,7 +198,8 @@ jobs:
       - name: Add iOS Rust targets
         run: |
           source "$HOME/.cargo/env"
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+          rustup target add aarch64-apple-ios
+          rustup target add aarch64-apple-ios-sim
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -207,6 +212,7 @@ jobs:
 
       - name: Clone vocdoni-passport-prover
         run: |
+          rm -rf ../vocdoni-passport-prover
           git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
             ${{ env.PROVER_REPO_URL }} ../vocdoni-passport-prover
 
@@ -218,16 +224,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build ACVM Witness library
-        working-directory: ../vocdoni-passport-prover/crates/acvm-witness-jni
-        run: |
-          source "$HOME/.cargo/env"
-          cargo build --release --target aarch64-apple-ios-sim
-          cargo build --release --target aarch64-apple-ios
-
       - name: Install CocoaPods dependencies
         working-directory: ios
-        run: pod install --repo-update
+        run: bundle exec pod install --repo-update
 
       - name: Build iOS app (Simulator)
         working-directory: ios
@@ -241,6 +240,9 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ONLY_ACTIVE_ARCH=YES \
+            ARCHS=arm64 \
+            EXCLUDED_ARCHS=x86_64 \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
