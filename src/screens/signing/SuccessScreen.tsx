@@ -7,12 +7,10 @@ import { Button } from '../../components/common';
 import { colors, borderRadius } from '../../components/common/styles';
 import type { SigningStackParamList, RootStackParamList } from '../../navigation/types';
 
-type NavigationProp = NativeStackNavigationProp<SigningStackParamList, 'SigningSuccess'>;
 type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<SigningStackParamList, 'SigningSuccess'>;
 
 export function SigningSuccessScreen() {
-  const navigation = useNavigation<NavigationProp>();
   const rootNavigation = useNavigation<RootNavigationProp>();
   const route = useRoute<RouteType>();
   const { request, durationMs } = route.params;

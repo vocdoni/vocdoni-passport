@@ -15,7 +15,7 @@ import { ScannerScreen } from '../screens/scanner/ScannerScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { WalletScreen } from '../screens/wallet';
 
-import { colors, borderRadius } from '../components/common/styles';
+import { colors } from '../components/common/styles';
 import type { TabParamList, IDsStackParamList, HistoryStackParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -119,7 +119,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 export function TabNavigator() {
   return (
     <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={CustomTabBar}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="IDs" component={IDsStackNavigator} />

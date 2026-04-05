@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackButton } from '../../components/common';
-import { Card, Chip } from '../../components/common/Card';
+import { Card } from '../../components/common/Card';
 import { SlideToVerify } from '../../components/SlideToVerify';
 import { colors, commonStyles, borderRadius } from '../../components/common/styles';
 import { authenticateForSigning } from '../../hooks/useAuth';

@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise -- CRS size alignment uses power-of-two bit shifts */
 import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
 

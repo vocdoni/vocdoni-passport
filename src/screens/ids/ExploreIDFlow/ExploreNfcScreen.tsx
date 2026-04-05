@@ -152,7 +152,7 @@ export function ExploreNfcScreen() {
 
   useEffect(() => {
     startScan();
-  }, []);
+  }, [startScan]);
 
   const retryScan = useCallback(async () => {
     scanAttemptRef.current += 1;
@@ -204,7 +204,13 @@ export function ExploreNfcScreen() {
 
         <Card>
           <View style={styles.nfcAnimation}>
-            <Animated.View style={[styles.nfcRing, { transform: [{ scale: ringAnim }], opacity: scanning ? 0.3 : 0 }]} />
+            <Animated.View
+              style={[
+                styles.nfcRing,
+                { transform: [{ scale: ringAnim }] },
+                scanning ? styles.nfcRingScanning : styles.nfcRingIdle,
+              ]}
+            />
             <Animated.View style={[styles.nfcCircle, { transform: [{ scale: pulseAnim }] }]}>
               <Text style={styles.nfcIcon}>📱</Text>
             </Animated.View>
@@ -305,6 +311,12 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     borderWidth: 3,
     borderColor: colors.primary,
+  },
+  nfcRingScanning: {
+    opacity: 0.3,
+  },
+  nfcRingIdle: {
+    opacity: 0,
   },
   nfcCircle: {
     width: 100,

@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise -- ASN.1 DER uses bitwise tag/length decoding */
 /**
  * Passport SOD Parser
  *

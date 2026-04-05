@@ -19,11 +19,7 @@ export function WalletCreateScreen() {
   const [hasRevealed, setHasRevealed] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
 
-  useEffect(() => {
-    createWalletOnMount();
-  }, []);
-
-  const createWalletOnMount = async () => {
+  const createWalletOnMount = useCallback(async () => {
     setIsCreating(true);
     try {
       const wallet = await createNewWallet();
@@ -41,7 +37,11 @@ export function WalletCreateScreen() {
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [createNewWallet, navigation]);
+
+  useEffect(() => {
+    createWalletOnMount();
+  }, [createWalletOnMount]);
 
   const handleReveal = useCallback(async () => {
     setHasRevealed(true);

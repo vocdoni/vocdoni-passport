@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native';
 import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -27,6 +27,11 @@ export function AddIDSuccessScreen() {
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
   const checkAnim = React.useRef(new Animated.Value(0)).current;
   const cardAnim = React.useRef(new Animated.Value(0)).current;
+
+  const loadID = useCallback(async () => {
+    const data = await getIDById(route.params.id);
+    setId(data);
+  }, [route.params.id]);
 
   useEffect(() => {
     loadID();
@@ -57,12 +62,7 @@ export function AddIDSuccessScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
-
-  const loadID = async () => {
-    const data = await getIDById(route.params.id);
-    setId(data);
-  };
+  }, [loadID, scaleAnim, opacityAnim, checkAnim, cardAnim]);
 
   const handleViewIDs = () => {
     navigation.dispatch(

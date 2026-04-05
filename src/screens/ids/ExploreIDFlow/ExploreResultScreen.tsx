@@ -18,6 +18,8 @@ import { Card } from '../../../components/common/Card';
 import { colors, commonStyles, borderRadius } from '../../../components/common/styles';
 import type { IDsStackParamList } from '../../../navigation/types';
 
+/* eslint-disable no-bitwise, no-control-regex -- BER-TLV parsing and stripping control chars in debug text */
+
 type NavigationProp = NativeStackNavigationProp<IDsStackParamList, 'ExploreIDResult'>;
 type RouteType = RouteProp<IDsStackParamList, 'ExploreIDResult'>;
 
@@ -702,7 +704,7 @@ export function ExploreResultScreen() {
             )}
             {parsed.dg11Raw && (
               <>
-                <Text style={[styles.rawDataLabel, { marginTop: 12 }]}>Raw Data (hex preview):</Text>
+                <Text style={[styles.rawDataLabel, styles.rawDataLabelMarginTop12]}>Raw Data (hex preview):</Text>
                 <Text style={styles.rawDataPreview} numberOfLines={2}>
                   {Buffer.from(parsed.dg11Raw, 'base64').toString('hex').slice(0, 100)}...
                 </Text>
@@ -744,7 +746,7 @@ export function ExploreResultScreen() {
             )}
             {parsed.dg12Raw && (
               <>
-                <Text style={[styles.rawDataLabel, { marginTop: 12 }]}>Raw Data (hex preview):</Text>
+                <Text style={[styles.rawDataLabel, styles.rawDataLabelMarginTop12]}>Raw Data (hex preview):</Text>
                 <Text style={styles.rawDataPreview} numberOfLines={2}>
                   {Buffer.from(parsed.dg12Raw, 'base64').toString('hex').slice(0, 100)}...
                 </Text>
@@ -782,7 +784,7 @@ export function ExploreResultScreen() {
                 return null;
               } catch { return null; }
             })()}
-            <Text style={[styles.rawDataLabel, { marginTop: 8 }]}>Raw Data (hex preview):</Text>
+            <Text style={[styles.rawDataLabel, styles.rawDataLabelMarginTop8]}>Raw Data (hex preview):</Text>
             <Text style={styles.rawDataPreview} numberOfLines={3}>
               {Buffer.from(parsed.dg13Raw, 'base64').toString('hex').slice(0, 150)}...
             </Text>
@@ -1058,6 +1060,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 4,
+  },
+  rawDataLabelMarginTop12: {
+    marginTop: 12,
+  },
+  rawDataLabelMarginTop8: {
+    marginTop: 8,
   },
   rawDataPreview: {
     fontFamily: 'monospace',

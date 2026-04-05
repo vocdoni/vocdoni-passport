@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise -- packing witness bytes into fixed-width fields */
 /**
  * Witness Encoder
  *

@@ -140,7 +140,17 @@ export function BootScreen({ onReady }: BootScreenProps) {
       pulseAnimation.stop();
       ringAnimation.stop();
     };
-  }, []);
+  }, [
+    logoOpacity,
+    logoScale,
+    pulseAnim,
+    ring1Opacity,
+    ring1Scale,
+    ring2Opacity,
+    ring2Scale,
+    titleOpacity,
+    titleTranslate,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,7 +216,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
           if (!cancelled) {onReady();}
         }, 1200);
       })
-      .catch((error: any) => {
+      .catch((_err: unknown) => {
         if (cancelled) {return;}
         setStatus('error');
         setStatusText('Ready to continue');
@@ -233,7 +243,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [onReady]);
+  }, [onReady, progressWidth, checkScale, buttonOpacity, buttonTranslate]);
 
   const progressInterpolate = progressWidth.interpolate({
     inputRange: [0, 100],

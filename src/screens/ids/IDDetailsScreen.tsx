@@ -31,16 +31,16 @@ export function IDDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadID();
-  }, [route.params.id]);
-
-  const loadID = async () => {
+  const loadID = useCallback(async () => {
     setLoading(true);
     const data = await getIDById(route.params.id);
     setId(data);
     setLoading(false);
-  };
+  }, [route.params.id]);
+
+  useEffect(() => {
+    loadID();
+  }, [loadID]);
 
   const handleDelete = useCallback(() => {
     Alert.alert(

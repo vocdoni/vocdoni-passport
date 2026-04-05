@@ -5,7 +5,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '../../components/common';
 import { Spinner } from '../../components/common/Spinner';
-import { colors, commonStyles, borderRadius } from '../../components/common/styles';
+import { colors, commonStyles } from '../../components/common/styles';
 import { pingServerHealth } from '../../services/ServerClient';
 import type { SigningStackParamList } from '../../navigation/types';
 

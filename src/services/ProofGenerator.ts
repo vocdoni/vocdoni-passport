@@ -27,11 +27,6 @@ import {
   getNumberOfPublicInputsFromVkey,
   ultraVkToFields,
   getCircuitMerkleProof,
-  getSaltedValuesForDisclosureCircuit,
-  calculatePrivateNullifier,
-  hashSaltDg1Dg2HashPrivateNullifier,
-  processSodSignature,
-  DG1_INPUT_SIZE,
   type Query,
   type BoundData,
 } from '@zkpassport/utils';

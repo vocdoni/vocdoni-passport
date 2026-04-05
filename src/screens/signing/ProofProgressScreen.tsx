@@ -7,7 +7,6 @@ import {
   Easing,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -24,8 +23,6 @@ import {
 import { aggregateProofOnServer, DuplicateSignatureError } from '../../services/ServerClient';
 import { useWallet } from '../../contexts/WalletContext';
 import type { SigningStackParamList } from '../../navigation/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<SigningStackParamList, 'ProofProgress'>;
 type RouteType = RouteProp<SigningStackParamList, 'ProofProgress'>;
@@ -309,7 +306,7 @@ export function ProofProgressScreen() {
         });
       }
     }
-  }, [addLog, navigation, progressAnim, request, selectedIdRef, updateStep]);
+  }, [addLog, navigation, progressAnim, request, selectedIdRef, updateStep, walletAddress]);
 
   useEffect(() => {
     if (!proofStarted.current) {
