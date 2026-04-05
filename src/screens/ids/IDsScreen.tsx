@@ -57,6 +57,11 @@ export function IDsScreen() {
     navigation.navigate('ExploreIDMrz');
   }, [navigation]);
 
+  const handleIdentity = useCallback(() => {
+    setShowDevMenu(false);
+    navigation.getParent()?.navigate('Wallet');
+  }, [navigation]);
+
   if (!hasIDs && !loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -81,24 +86,24 @@ export function IDsScreen() {
             <Button label="Add your first ID" onPress={handleAddID} variant="primary" />
           </View>
         </ScrollView>
-        
+
         <Modal
           visible={showDevMenu}
           transparent
           animationType="fade"
           onRequestClose={() => setShowDevMenu(false)}
         >
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowDevMenu(false)}
           >
             <View style={styles.devMenuContainer}>
               <View style={styles.devMenuHeader}>
                 <Text style={styles.devMenuIcon}>🛠️</Text>
-                <Text style={styles.devMenuTitle}>Developer Tools</Text>
+                <Text style={styles.devMenuTitle}>Tools</Text>
               </View>
-              
+
               <TouchableOpacity style={styles.devMenuItem} onPress={handleExploreID}>
                 <Text style={styles.devMenuItemIcon}>🔬</Text>
                 <View style={styles.devMenuItemContent}>
@@ -112,8 +117,8 @@ export function IDsScreen() {
 
               <View style={styles.devMenuDivider} />
 
-              <TouchableOpacity 
-                style={styles.devMenuClose} 
+              <TouchableOpacity
+                style={styles.devMenuClose}
                 onPress={() => setShowDevMenu(false)}
               >
                 <Text style={styles.devMenuCloseText}>Close</Text>
@@ -165,8 +170,8 @@ export function IDsScreen() {
             snapToAlignment="center"
           >
             {ids.map((id, index) => (
-              <View 
-                key={id.id} 
+              <View
+                key={id.id}
                 style={[
                   styles.cardWrapper,
                   index === ids.length - 1 && styles.cardWrapperLast,
@@ -221,17 +226,17 @@ export function IDsScreen() {
         animationType="fade"
         onRequestClose={() => setShowDevMenu(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowDevMenu(false)}
         >
           <View style={styles.devMenuContainer}>
             <View style={styles.devMenuHeader}>
               <Text style={styles.devMenuIcon}>🛠️</Text>
-              <Text style={styles.devMenuTitle}>Developer Tools</Text>
+              <Text style={styles.devMenuTitle}>Tools</Text>
             </View>
-            
+
             <TouchableOpacity style={styles.devMenuItem} onPress={handleExploreID}>
               <Text style={styles.devMenuItemIcon}>🔬</Text>
               <View style={styles.devMenuItemContent}>
@@ -243,10 +248,21 @@ export function IDsScreen() {
               <Text style={styles.devMenuItemArrow}>→</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.devMenuItem} onPress={handleIdentity}>
+              <Text style={styles.devMenuItemIcon}>🔐</Text>
+              <View style={styles.devMenuItemContent}>
+                <Text style={styles.devMenuItemTitle}>Digital Identity</Text>
+                <Text style={styles.devMenuItemDesc}>
+                  View your wallet address and recovery phrase
+                </Text>
+              </View>
+              <Text style={styles.devMenuItemArrow}>→</Text>
+            </TouchableOpacity>
+
             <View style={styles.devMenuDivider} />
 
-            <TouchableOpacity 
-              style={styles.devMenuClose} 
+            <TouchableOpacity
+              style={styles.devMenuClose}
               onPress={() => setShowDevMenu(false)}
             >
               <Text style={styles.devMenuCloseText}>Close</Text>

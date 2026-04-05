@@ -54,7 +54,7 @@ export function MnemonicDisplay({ words, onReveal, revealed = false }: MnemonicD
           ))}
         </View>
       </View>
-      
+
       <TouchableOpacity
         style={[
           styles.actionButton,
@@ -102,7 +102,7 @@ export function MnemonicInput({ value, onChange, placeholder }: MnemonicInputPro
           {value || placeholder || 'Enter your 12-word recovery phrase...'}
         </Text>
       </ScrollView>
-      
+
       <TouchableOpacity style={styles.pasteButton} onPress={handlePaste}>
         <Text style={styles.pasteButtonText}>PASTE</Text>
       </TouchableOpacity>

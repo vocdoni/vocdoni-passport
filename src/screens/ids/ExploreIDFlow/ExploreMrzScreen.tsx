@@ -85,7 +85,7 @@ export function ExploreMrzScreen() {
     <View style={commonStyles.safeArea}>
       <ScrollView contentContainerStyle={commonStyles.screenPad} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>🔬 Explore ID</Text>
           <Text style={commonStyles.pageSubtitle}>
@@ -136,7 +136,7 @@ export function ExploreMrzScreen() {
         ) : (
           <Card>
             <Text style={styles.manualTitle}>Enter Document Details</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Document Number</Text>
               <TextInput

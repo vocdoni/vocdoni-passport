@@ -148,7 +148,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${Math.round(bytes)} bytes`;
+  if (bytes < 1024) {return `${Math.round(bytes)} bytes`;}
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 

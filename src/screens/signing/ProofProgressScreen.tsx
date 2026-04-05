@@ -207,9 +207,9 @@ export function ProofProgressScreen() {
           addLog('info', `[${phase}] ${detail}`);
 
           let progress = 0.1;
-          if (phase === 'registry' || phase === 'download') progress = 0.2;
-          if (phase === 'inputs') progress = 0.35;
-          if (phase === 'prove') progress = 0.6;
+          if (phase === 'registry' || phase === 'download') {progress = 0.2;}
+          if (phase === 'inputs') {progress = 0.35;}
+          if (phase === 'prove') {progress = 0.6;}
           Animated.timing(progressAnim, { toValue: progress, duration: 300, useNativeDriver: false }).start();
         },
         request.query,
@@ -264,13 +264,13 @@ export function ProofProgressScreen() {
     } catch (err: any) {
       const message = err?.message || 'Proof generation failed';
       const stack = err?.stack || '';
-      
+
       // Check if this is a duplicate signature error
-      const isDuplicate = err instanceof DuplicateSignatureError || 
+      const isDuplicate = err instanceof DuplicateSignatureError ||
         err?.name === 'DuplicateSignatureError' ||
         message.toLowerCase().includes('already exists') ||
         message.toLowerCase().includes('duplicate');
-      
+
       if (isDuplicate) {
         setIsDuplicateSignature(true);
         setError('You have already signed this petition');
@@ -320,7 +320,7 @@ export function ProofProgressScreen() {
 
   const handleDevTap = () => {
     devTapCount.current += 1;
-    if (devTapTimer.current) clearTimeout(devTapTimer.current);
+    if (devTapTimer.current) {clearTimeout(devTapTimer.current);}
     devTapTimer.current = setTimeout(() => {
       devTapCount.current = 0;
     }, 500);
@@ -429,8 +429,8 @@ export function ProofProgressScreen() {
             {error ? (isDuplicateSignature ? 'Already Signed' : 'Proof Failed') : 'Generating Proof'}
           </Text>
           <Text style={styles.subtitle}>
-            {error 
-              ? (isDuplicateSignature ? 'You have already signed this petition' : 'Something went wrong') 
+            {error
+              ? (isDuplicateSignature ? 'You have already signed this petition' : 'Something went wrong')
               : friendlyMessage}
           </Text>
 
@@ -602,7 +602,7 @@ function getUserFriendlyError(message: string): string {
 }
 
 function collectDisclosedFields(query?: Record<string, any> | null): string[] {
-  if (!query) return [];
+  if (!query) {return [];}
   const { FIELD_LABELS } = require('../../services/RequirementsValidator');
   return Object.entries(query)
     .filter(([, value]: any) => value?.disclose || value?.eq)

@@ -28,8 +28,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   logo: {
-    height: 40,
-    width: 160,
+    height: 48,
+    width: 192,
   },
   separator: {
     height: 1,

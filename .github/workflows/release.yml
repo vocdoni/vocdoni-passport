@@ -1,0 +1,329 @@
+# Release Workflow
+#
+# This workflow creates a GitHub release with downloadable APK and IPA assets.
+# Triggered manually or when a version tag is pushed.
+#
+# Usage:
+#   1. Push a tag: git tag v1.0.0 && git push origin v1.0.0
+#   2. Or manually trigger from Actions tab
+#
+# Copyright (c) 2024 Vocdoni Association
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g., v1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        default: false
+        type: boolean
+
+  push:
+    tags:
+      - "v*"
+
+env:
+  RUST_VERSION: "1.89"
+  PROVER_REPO_URL: "https://github.com/vocdoni/vocdoni-passport-prover.git"
+  PROVER_REPO_REF: "main"
+  NODE_VERSION: "20"
+  DOCKER_IMAGE: "vocdoni-passport-android"
+
+jobs:
+  # Determine version from tag or input
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+  # Run tests first
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
+  # Build Android APK
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: [prepare, test]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-release-${{ hashFiles('docker/apk.Dockerfile', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-release-
+            ${{ runner.os }}-buildx-android-
+
+      - name: Prepare prover source
+        run: |
+          mkdir -p vendor/vocdoni-passport-prover
+          git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
+            ${{ env.PROVER_REPO_URL }} /tmp/vocdoni-passport-prover
+          cp /tmp/vocdoni-passport-prover/Cargo.toml vendor/vocdoni-passport-prover/
+          cp /tmp/vocdoni-passport-prover/Cargo.lock vendor/vocdoni-passport-prover/
+          cp -R /tmp/vocdoni-passport-prover/crates vendor/vocdoni-passport-prover/
+
+      - name: Build Android APK
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/apk.Dockerfile
+          build-args: GRADLE_TASK=assembleRelease
+          tags: ${{ env.DOCKER_IMAGE }}:latest
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Extract APK
+        run: |
+          mkdir -p out
+          CONTAINER_ID=$(docker create ${{ env.DOCKER_IMAGE }}:latest)
+          docker cp "$CONTAINER_ID:/out/." out/
+          docker rm "$CONTAINER_ID"
+          
+          # Rename with version
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mv out/app-release.apk "out/VocdoniPassport-${VERSION}.apk"
+          ls -lh out/
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: out/*.apk
+          retention-days: 30
+
+  # Build iOS app (development build for simulator)
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-14
+    timeout-minutes: 90
+    needs: [prepare, test]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+
+      - name: Cache Rust toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+          key: ${{ runner.os }}-rust-${{ env.RUST_VERSION }}
+
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v rustc &> /dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+              --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+          fi
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Add iOS Rust targets
+        run: |
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: ${{ runner.os }}-pods-
+
+      - name: Clone vocdoni-passport-prover
+        run: |
+          git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
+            ${{ env.PROVER_REPO_URL }} ../vocdoni-passport-prover
+
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v4
+        with:
+          path: ../vocdoni-passport-prover/target
+          key: ${{ runner.os }}-rust-ios-release-${{ hashFiles('../vocdoni-passport-prover/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-ios-release-
+            ${{ runner.os }}-rust-ios-
+
+      - name: Select Xcode version
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+
+      - name: Install npm dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build ACVM Witness library
+        working-directory: ../vocdoni-passport-prover/crates/acvm-witness-jni
+        run: |
+          cargo build --release --target aarch64-apple-ios-sim
+          cargo build --release --target aarch64-apple-ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Build iOS app (Simulator)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          
+          xcodebuild \
+            -workspace VocdoniPassport.xcworkspace \
+            -scheme VocdoniPassport \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build \
+            2>&1 | xcpretty --color
+
+          # Package the .app bundle
+          APP_PATH=$(find "$RUNNER_TEMP/DerivedData" -name "*.app" -type d | head -1)
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mkdir -p "$RUNNER_TEMP/artifacts"
+          
+          cd "$(dirname "$APP_PATH")"
+          zip -r "$RUNNER_TEMP/artifacts/VocdoniPassport-iOS-Simulator-${VERSION}.zip" "$(basename "$APP_PATH")"
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator
+          path: ${{ runner.temp }}/artifacts/*.zip
+          retention-days: 30
+
+  # Create GitHub Release with all artifacts
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [prepare, build-android, build-ios]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/
+
+      - name: Download iOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-simulator
+          path: artifacts/
+
+      - name: List artifacts
+        run: ls -lh artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare.outputs.version }}
+          name: Release ${{ needs.prepare.outputs.version }}
+          draft: false
+          prerelease: ${{ inputs.prerelease || false }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.apk
+            artifacts/*.zip
+          body: |
+            ## Downloads
+            
+            | Platform | File | Description |
+            |----------|------|-------------|
+            | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.apk` | Install directly on Android devices |
+            | iOS | `VocdoniPassport-iOS-Simulator-${{ needs.prepare.outputs.version }}.zip` | Simulator build (drag to Simulator) |
+            
+            ### Android Installation
+            1. Download the APK file
+            2. Enable "Install from unknown sources" in Settings
+            3. Open the APK file to install
+            
+            ### iOS Simulator
+            1. Download and unzip the file
+            2. Drag the .app folder onto the iOS Simulator
+            
+            > **Note**: For iOS device installation, a signed IPA is required. Contact the development team for TestFlight access.

@@ -1,13 +1,37 @@
 {
-  "name": "VocdoniPassport",
-  "version": "0.0.1",
+  "name": "vocdoni-passport",
+  "version": "0.1.0",
+  "description": "Privacy-preserving identity verification using zkPassport and zero-knowledge proofs",
   "private": true,
+  "license": "AGPL-3.0-or-later",
+  "author": "Vocdoni Association <info@vocdoni.io>",
+  "homepage": "https://github.com/vocdoni/vocdoni-passport",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vocdoni/vocdoni-passport.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vocdoni/vocdoni-passport/issues"
+  },
+  "keywords": [
+    "zkpassport",
+    "zero-knowledge",
+    "identity",
+    "passport",
+    "privacy",
+    "react-native",
+    "mobile",
+    "vocdoni"
+  ],
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "watchman watch-del-all && rm -rf node_modules && rm -rf $TMPDIR/metro-* && rm -rf $TMPDIR/haste-map-*"
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.1.3",

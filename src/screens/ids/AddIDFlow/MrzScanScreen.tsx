@@ -50,7 +50,7 @@ export function MrzScanScreen() {
     const d = doc.trim().toUpperCase();
     const b = dob.trim();
     const e = exp.trim();
-    
+
     if (!d) {
       Alert.alert('Missing', 'Enter the document number.');
       return;
@@ -63,7 +63,7 @@ export function MrzScanScreen() {
       Alert.alert('Invalid', 'Expiry date must use YYMMDD format (e.g., 300115).');
       return;
     }
-    
+
     navigation.navigate('AddIDNfc', {
       documentNumber: d.padEnd(9, '<'),
       dateOfBirth: b,
@@ -79,7 +79,7 @@ export function MrzScanScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>Add New ID</Text>
           <Text style={commonStyles.pageSubtitle}>

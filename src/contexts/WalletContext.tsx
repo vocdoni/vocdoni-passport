@@ -5,7 +5,6 @@ import {
   createWallet,
   restoreWallet,
   getWalletPhrase,
-  getWalletAddress,
   markWalletBackedUp,
   deleteWallet,
   isValidMnemonic,
@@ -19,7 +18,7 @@ interface WalletContextValue {
   status: WalletStatus;
   walletInfo: StoredWalletInfo | null;
   address: string | null;
-  
+
   // Actions
   createNewWallet: () => Promise<WalletData | null>;
   restoreFromPhrase: (phrase: string) => Promise<WalletData | null>;
@@ -27,7 +26,7 @@ interface WalletContextValue {
   markBackedUp: () => Promise<void>;
   resetWallet: () => Promise<boolean>;
   refreshWalletState: () => Promise<void>;
-  
+
   // Validation
   validateMnemonic: (phrase: string) => boolean;
 }

@@ -13,7 +13,7 @@ type NavigationProp = NativeStackNavigationProp<WalletStackParamList, 'WalletCre
 export function WalletCreateScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { createNewWallet, markBackedUp } = useWallet();
-  
+
   const [words, setWords] = useState<string[] | undefined>();
   const [isCreating, setIsCreating] = useState(false);
   const [hasRevealed, setHasRevealed] = useState(false);
@@ -113,7 +113,7 @@ export function WalletCreateScreen() {
 
         <View style={styles.buttons}>
           <Button
-            label={hasRevealed ? "I've Saved My Phrase" : "Continue"}
+            label={hasRevealed ? "I've Saved My Phrase" : 'Continue'}
             onPress={handleContinue}
             variant="primary"
           />

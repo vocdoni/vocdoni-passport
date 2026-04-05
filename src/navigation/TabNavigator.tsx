@@ -68,18 +68,20 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           }
         };
 
+        // Skip rendering Wallet tab (it's accessed via Tools menu)
+        if (route.name === 'Wallet') {
+          return null;
+        }
+
         let icon = '🪪';
         let label = 'IDs';
-        
+
         if (route.name === 'Scanner') {
           icon = '📷';
           label = 'Scan & Sign';
         } else if (route.name === 'History') {
           icon = '📜';
           label = 'History';
-        } else if (route.name === 'Wallet') {
-          icon = '🔐';
-          label = 'Identity';
         }
 
         const isCenter = route.name === 'Scanner';
@@ -123,7 +125,11 @@ export function TabNavigator() {
       <Tab.Screen name="IDs" component={IDsStackNavigator} />
       <Tab.Screen name="Scanner" component={ScannerScreen} />
       <Tab.Screen name="History" component={HistoryStackNavigator} />
-      <Tab.Screen name="Wallet" component={WalletScreen} />
+      <Tab.Screen
+        name="Wallet"
+        component={WalletScreen}
+        options={{ tabBarButton: () => null }}
+      />
     </Tab.Navigator>
   );
 }

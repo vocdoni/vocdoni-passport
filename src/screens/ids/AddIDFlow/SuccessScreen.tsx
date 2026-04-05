@@ -22,7 +22,7 @@ export function AddIDSuccessScreen() {
   const route = useRoute<RouteType>();
   const insets = useSafeAreaInsets();
   const [id, setId] = useState<StoredID | null>(null);
-  
+
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
   const checkAnim = React.useRef(new Animated.Value(0)).current;
@@ -30,7 +30,7 @@ export function AddIDSuccessScreen() {
 
   useEffect(() => {
     loadID();
-    
+
     Animated.sequence([
       Animated.parallel([
         Animated.spring(scaleAnim, {
@@ -79,30 +79,30 @@ export function AddIDSuccessScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.successBadge, 
-              { 
-                opacity: opacityAnim, 
-                transform: [{ scale: scaleAnim }] 
-              }
+              styles.successBadge,
+              {
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              },
             ]}
           >
-            <Animated.Text 
+            <Animated.Text
               style={[
                 styles.successIcon,
-                { transform: [{ scale: checkAnim }] }
+                { transform: [{ scale: checkAnim }] },
               ]}
             >
               ✓
             </Animated.Text>
           </Animated.View>
-          
+
           <Animated.View style={{ opacity: opacityAnim }}>
             <Text style={styles.title}>ID Added Successfully</Text>
             <Text style={styles.subtitle}>
@@ -111,18 +111,18 @@ export function AddIDSuccessScreen() {
           </Animated.View>
 
           {id && (
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.cardPreview,
-                { 
+                {
                   opacity: cardAnim,
-                  transform: [{ 
+                  transform: [{
                     translateY: cardAnim.interpolate({
                       inputRange: [0, 1],
                       outputRange: [20, 0],
-                    })
-                  }]
-                }
+                    }),
+                  }],
+                },
               ]}
             >
               <View style={styles.previewCard}>

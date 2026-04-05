@@ -13,7 +13,7 @@ type NavigationProp = NativeStackNavigationProp<WalletStackParamList, 'WalletRes
 export function WalletRestoreScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { restoreFromPhrase, validateMnemonic } = useWallet();
-  
+
   const [phrase, setPhrase] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function WalletRestoreScreen() {
 
   const handleRestore = useCallback(async () => {
     const trimmedPhrase = phrase.trim().toLowerCase();
-    
+
     // Validate word count
     const words = trimmedPhrase.split(/\s+/);
     if (words.length !== 12 && words.length !== 24) {
@@ -90,7 +90,7 @@ export function WalletRestoreScreen() {
             autoCorrect={false}
             autoComplete="off"
           />
-          
+
           <View style={styles.inputFooter}>
             <Text style={styles.wordCount}>
               {wordCount} / 12 words
@@ -111,14 +111,14 @@ export function WalletRestoreScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.infoIcon}>💡</Text>
           <Text style={styles.infoText}>
-            Your recovery phrase is 12 words that were shown when you first 
+            Your recovery phrase is 12 words that were shown when you first
             created your identity. Enter them in the exact order, separated by spaces.
           </Text>
         </View>
 
         <View style={styles.buttons}>
           <Button
-            label={isRestoring ? "Restoring..." : "Restore Identity"}
+            label={isRestoring ? 'Restoring...' : 'Restore Identity'}
             onPress={handleRestore}
             variant="primary"
             disabled={isRestoring || wordCount < 12}

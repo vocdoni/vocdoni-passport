@@ -21,7 +21,7 @@ export function setBbCrsPath(path: string): void {
 }
 
 async function callBbapi(encoded: Uint8Array): Promise<any> {
-  if (!Barretenberg) throw new Error('Barretenberg native module not loaded');
+  if (!Barretenberg) {throw new Error('Barretenberg native module not loaded');}
   const inputB64 = Buffer.from(encoded).toString('base64');
   const outputB64: string = await Barretenberg.bbapi(inputB64);
   const outputBytes = new Uint8Array(Buffer.from(outputB64, 'base64'));

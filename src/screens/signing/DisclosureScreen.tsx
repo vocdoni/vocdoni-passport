@@ -71,7 +71,7 @@ export function DisclosureScreen() {
     <View style={commonStyles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>Information Disclosure</Text>
           <Text style={commonStyles.pageSubtitle}>
@@ -150,23 +150,23 @@ export function DisclosureScreen() {
 }
 
 function collectDisclosures(query?: Record<string, any> | null): string[] {
-  if (!query) return [];
+  if (!query) {return [];}
   return Object.entries(query)
     .filter(([, value]: any) => value?.disclose || value?.eq)
     .map(([key]) => friendlyFieldName(key));
 }
 
 function collectRules(query?: Record<string, any> | null): string[] {
-  if (!query) return [];
+  if (!query) {return [];}
   const rules: string[] = [];
-  
+
   const nationalityIn = query?.nationality?.in;
   const nationalityOut = query?.nationality?.out;
   const issuingCountryIn = query?.issuing_country?.in;
   const issuingCountryOut = query?.issuing_country?.out;
   const ageGte = query?.age?.gte;
   const ageLte = query?.age?.lte;
-  
+
   if (Array.isArray(nationalityIn) && nationalityIn.length) {
     rules.push(`Nationality must be: ${nationalityIn.join(', ')}`);
   }
@@ -185,7 +185,7 @@ function collectRules(query?: Record<string, any> | null): string[] {
   if (ageLte) {
     rules.push(`Must be at most ${ageLte} years old`);
   }
-  
+
   return rules;
 }
 

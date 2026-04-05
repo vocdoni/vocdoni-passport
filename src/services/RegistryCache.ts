@@ -34,7 +34,7 @@ async function atomicWriteUtf8(dest: string, data: string): Promise<void> {
 
 export async function readCachedManifest(version: string): Promise<unknown | null> {
   const path = manifestFile(version);
-  if (!(await RNFS.exists(path))) return null;
+  if (!(await RNFS.exists(path))) {return null;}
   try {
     const raw = await RNFS.readFile(path, 'utf8');
     return JSON.parse(raw);
@@ -50,7 +50,7 @@ export async function writeCachedManifest(version: string, manifest: unknown): P
 
 export async function readCachedCertificates(rootHex: string): Promise<unknown | null> {
   const path = certsFile(rootHex);
-  if (!(await RNFS.exists(path))) return null;
+  if (!(await RNFS.exists(path))) {return null;}
   try {
     const raw = await RNFS.readFile(path, 'utf8');
     return JSON.parse(raw);
@@ -66,7 +66,7 @@ export async function writeCachedCertificates(rootHex: string, packaged: unknown
 
 export async function readCachedPackagedCircuit(circuitHash: string): Promise<unknown | null> {
   const path = circuitFile(circuitHash);
-  if (!(await RNFS.exists(path))) return null;
+  if (!(await RNFS.exists(path))) {return null;}
   try {
     const raw = await RNFS.readFile(path, 'utf8');
     return JSON.parse(raw);

@@ -68,14 +68,14 @@ function calculateAge(dateOfBirth: string): number {
 
   const today = new Date();
   const birthDate = new Date(year, month - 1, day);
-  
+
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  
+
   return age;
 }
 
@@ -101,7 +101,7 @@ function isDocumentExpired(expiryDate: string): boolean {
   const expiry = new Date(year, month - 1, day);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   return expiry < today;
 }
 
@@ -119,21 +119,21 @@ export function validateIDAgainstQuery(id: StoredID, query?: Query | null): Vali
 
   if (query.nationality) {
     const nationality = id.nationality?.toUpperCase();
-    
+
     if (query.nationality.in && Array.isArray(query.nationality.in)) {
       const allowed = query.nationality.in.map(n => n.toUpperCase());
       if (!allowed.includes(nationality)) {
         errors.push(`Nationality must be one of: ${query.nationality.in.join(', ')}. Your nationality is ${nationality}.`);
       }
     }
-    
+
     if (query.nationality.out && Array.isArray(query.nationality.out)) {
       const excluded = query.nationality.out.map(n => n.toUpperCase());
       if (excluded.includes(nationality)) {
         errors.push(`Nationality ${nationality} is not allowed for this petition.`);
       }
     }
-    
+
     if (query.nationality.eq) {
       if (nationality !== query.nationality.eq.toUpperCase()) {
         errors.push(`Nationality must be ${query.nationality.eq}. Your nationality is ${nationality}.`);
@@ -143,21 +143,21 @@ export function validateIDAgainstQuery(id: StoredID, query?: Query | null): Vali
 
   if (query.issuing_country) {
     const issuingCountry = id.issuingCountry?.toUpperCase();
-    
+
     if (query.issuing_country.in && Array.isArray(query.issuing_country.in)) {
       const allowed = query.issuing_country.in.map(c => c.toUpperCase());
       if (!allowed.includes(issuingCountry)) {
         errors.push(`Issuing country must be one of: ${query.issuing_country.in.join(', ')}. Your document is from ${issuingCountry}.`);
       }
     }
-    
+
     if (query.issuing_country.out && Array.isArray(query.issuing_country.out)) {
       const excluded = query.issuing_country.out.map(c => c.toUpperCase());
       if (excluded.includes(issuingCountry)) {
         errors.push(`Documents from ${issuingCountry} are not allowed for this petition.`);
       }
     }
-    
+
     if (query.issuing_country.eq) {
       if (issuingCountry !== query.issuing_country.eq.toUpperCase()) {
         errors.push(`Issuing country must be ${query.issuing_country.eq}. Your document is from ${issuingCountry}.`);
@@ -167,33 +167,33 @@ export function validateIDAgainstQuery(id: StoredID, query?: Query | null): Vali
 
   if (query.age) {
     const age = calculateAge(id.dateOfBirth);
-    
+
     if (age < 0) {
       warnings.push('Could not calculate age from date of birth.');
     } else {
       if (query.age.gte != null && age < query.age.gte) {
         errors.push(`You must be at least ${query.age.gte} years old. You are ${age}.`);
       }
-      
+
       if (query.age.gt != null && age <= query.age.gt) {
         errors.push(`You must be older than ${query.age.gt} years. You are ${age}.`);
       }
-      
+
       if (query.age.lte != null && age > query.age.lte) {
         errors.push(`You must be at most ${query.age.lte} years old. You are ${age}.`);
       }
-      
+
       if (query.age.lt != null && age >= query.age.lt) {
         errors.push(`You must be younger than ${query.age.lt} years. You are ${age}.`);
       }
-      
+
       if (query.age.range && Array.isArray(query.age.range) && query.age.range.length === 2) {
         const [min, max] = query.age.range;
         if (age < min || age > max) {
           errors.push(`Age must be between ${min} and ${max}. You are ${age}.`);
         }
       }
-      
+
       if (query.age.eq != null && age !== query.age.eq) {
         errors.push(`Age must be exactly ${query.age.eq}. You are ${age}.`);
       }
@@ -240,8 +240,8 @@ export function getEligibleIDs(ids: StoredID[], query?: Query | null): { eligibl
 }
 
 export function formatRequirementsSummary(query?: Query | null): string[] {
-  if (!query) return [];
-  
+  if (!query) {return [];}
+
   const requirements: string[] = [];
 
   if (query.nationality?.in?.length) {
@@ -330,17 +330,17 @@ export const FIELD_LABELS: Record<DisclosableField, string> = {
 };
 
 export function getDisclosedFields(query?: Query | null): DisclosableField[] {
-  if (!query) return [];
-  
+  if (!query) {return [];}
+
   const disclosed: DisclosableField[] = [];
-  
+
   for (const field of DISCLOSABLE_FIELDS) {
     const config = query[field];
     if (config && typeof config === 'object' && (config.disclose || (config as any).eq)) {
       disclosed.push(field);
     }
   }
-  
+
   return disclosed;
 }
 

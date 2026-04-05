@@ -62,7 +62,7 @@ export function IDCard({ id, blurred = false, onPress }: IDCardProps) {
           <View style={styles.photoContainer}>
             {id.photo ? (
               <Image
-                source={{ uri: `data:image/jpeg;base64,${id.photo}` }}
+                source={{ uri: getPhotoUri(id.photo) }}
                 style={[styles.photo, blurred && styles.blurred]}
                 resizeMode="cover"
               />
@@ -120,8 +120,8 @@ export function IDCardCompact({ id, selected, onPress }: { id: StoredID; selecte
   const fullName = `${id.firstName} ${id.lastName}`.trim();
 
   return (
-    <TouchableOpacity 
-      style={[styles.compactCard, selected && styles.compactCardSelected]} 
+    <TouchableOpacity
+      style={[styles.compactCard, selected && styles.compactCardSelected]}
       onPress={onPress}
       activeOpacity={0.8}
     >
@@ -138,13 +138,30 @@ export function IDCardCompact({ id, selected, onPress }: { id: StoredID; selecte
 }
 
 function maskDocumentNumber(docNum: string): string {
-  if (docNum.length <= 4) return docNum;
+  if (docNum.length <= 4) {return docNum;}
   const visible = docNum.slice(-4);
   return `****${visible}`;
 }
 
+function getPhotoUri(base64Photo: string): string {
+  // Detect image format from base64 data
+  // JPEG starts with /9j/ in base64 (0xFF 0xD8 in hex)
+  // JPEG2000 starts with AAAA in base64 (0x00 0x00 0x00 in hex) or similar
+  // PNG starts with iVBO in base64
+  if (base64Photo.startsWith('/9j/') || base64Photo.startsWith('/9j+')) {
+    return `data:image/jpeg;base64,${base64Photo}`;
+  }
+  if (base64Photo.startsWith('iVBO')) {
+    return `data:image/png;base64,${base64Photo}`;
+  }
+  // For JPEG2000 and other formats, try generic approach
+  // JPEG2000 is not natively supported, but some devices might handle it
+  // Try as JPEG first (most common), then as generic image
+  return `data:image/jpeg;base64,${base64Photo}`;
+}
+
 function formatExpiry(date: string): string {
-  if (!date) return 'N/A';
+  if (!date) {return 'N/A';}
   const parts = date.split('-');
   if (parts.length >= 2) {
     return `${parts[1]}/${parts[0].slice(-2)}`;

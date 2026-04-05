@@ -1,124 +1,191 @@
-# VocdoniPassport
+# Vocdoni Passport
 
-React Native mobile client for zkPassport proving stack.
+Privacy-preserving identity verification using zkPassport and zero-knowledge proofs.
 
-## Responsibilities
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Android Build](https://github.com/vocdoni/vocdoni-passport/actions/workflows/android-build.yml/badge.svg)](https://github.com/vocdoni/vocdoni-passport/actions/workflows/android-build.yml)
+[![iOS Build](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ios-build.yml/badge.svg)](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ios-build.yml)
 
-The app is intentionally thin. It owns:
+## Overview
 
-- QR scan or pasted request link intake
-- petition and disclosure review
-- MRZ capture
-- NFC document reading
-- native witness and inner proof generation
-- submission of inner proofs to the Go server
-- user-facing progress, success, and support-report UI
+Vocdoni Passport is a mobile application that enables users to prove attributes about their identity (age, nationality, etc.) without revealing their actual identity documents. It uses the [zkPassport](https://zkpassport.id) protocol to generate zero-knowledge proofs from NFC-enabled identity documents (passports, national ID cards).
 
-The app does not own:
+### Key Features
 
-- outer proof generation
-- zkPassport artifact versioning
-- `bb` version pinning
-- server-side aggregation logic
+- **Privacy-First**: Prove you meet requirements without revealing personal data
+- **Secure Storage**: Identity data is encrypted and stored locally on your device
+- **Biometric Protection**: Access requires device unlock (fingerprint, face, or PIN)
+- **Embedded Wallet**: Built-in Ethereum wallet for signing proofs
+- **Cross-Platform**: Available for Android and iOS
 
-Those responsibilities live in vocdoni-passport-prover.
+### How It Works
 
-## Repository Layout
+1. **Scan your ID**: Use NFC to read your passport or national ID card
+2. **Store securely**: Your ID data is encrypted and stored on-device
+3. **Sign petitions**: Scan a QR code to participate in a petition
+4. **Generate proof**: Create a zero-knowledge proof that you meet the requirements
+5. **Submit**: The proof is verified without revealing your identity
 
-- `App.tsx`
-  app flow and screen composition
-- `src/native/`
-  React Native bridges to native witness and proving modules
-- `src/services/`
-  HTTP, proof, preload, and export helpers
-- `android/`
-  Android app and JNI integration
-- `ios/`
-  iOS app and native integration
-- `scripts/build-acvm-jni-android.sh`
-  Android helper for the Rust witness JNI crate
+## Installation
 
-## Build And Install
+### Pre-built APK (Android)
 
-Run commands from this repository root.
+Download the latest APK from the [Releases](https://github.com/vocdoni/vocdoni-passport/releases) page.
 
-Build the Android release APK:
+### Build from Source
+
+#### Prerequisites
+
+- Node.js 18+
+- Docker (for Android builds)
+- macOS with Xcode 16+ (for iOS builds)
+- Rust 1.89+ (for native library development)
+
+#### Android Build
 
 ```bash
+# Build release APK using Docker (works on any OS)
 make apk
-```
 
-Install the latest built APK on a connected Android device:
-
-```bash
+# Install on connected device
 make apk-install
 ```
 
-Clear app storage and stop the app:
+#### iOS Build
 
-```bash
-make apk-reset
+iOS builds require macOS. You can either:
+
+1. **Use GitHub Actions** (recommended for CI/CD):
+   - Push to the `main` branch, or
+   - Manually trigger the workflow from the Actions tab
+
+2. **Build locally on macOS**:
+   ```bash
+   # Install dependencies
+   npm install --legacy-peer-deps
+   cd ios && pod install && cd ..
+
+   # Open in Xcode
+   open ios/VocdoniPassport.xcworkspace
+   ```
+
+See `make ios-info` for detailed iOS build instructions.
+
+## Project Structure
+
+```
+├── src/
+│   ├── components/      # Reusable UI components
+│   ├── screens/         # App screens (IDs, Scanner, History, etc.)
+│   ├── services/        # Business logic (proof generation, storage)
+│   ├── native/          # Native module bridges
+│   └── navigation/      # Navigation configuration
+├── android/             # Android native code and configuration
+├── ios/                 # iOS native code and configuration
+├── docker/              # Docker build configurations
+└── .github/workflows/   # CI/CD pipelines
 ```
 
-Build, install, and reset in one step:
+## Architecture
+
+The app follows a client-server architecture:
+
+- **Mobile App** (this repository): Handles ID scanning, storage, and inner proof generation
+- **Prover Server** ([vocdoni-passport-prover](https://github.com/vocdoni/vocdoni-passport-prover)): Generates outer proofs and verifies submissions
+
+### Native Dependencies
+
+The app includes two native proving components:
+
+| Component | Platform | Purpose |
+|-----------|----------|---------|
+| `barretenberg_jni` | Android | ZK proof generation |
+| `acvm-witness-jni` | Android/iOS | Witness solving for circuits |
+
+## Development
+
+### Local Development Setup
 
 ```bash
-make apk-clean-install
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Start Metro bundler
+npm start
+
+# Run on Android (requires connected device or emulator)
+npm run android
+
+# Run on iOS (requires macOS)
+npm run ios
 ```
 
-Pull the latest exported fixture from a connected device:
+### Prover Dependency
 
+The build requires the `acvm-witness-jni` crate from `vocdoni-passport-prover`. The Makefile resolves this dependency in order:
+
+1. `PROVER_REPO_LOCAL_DIR` environment variable
+2. `../vocdoni-passport-prover` (sibling directory)
+3. Clone from `PROVER_REPO_URL` at `PROVER_REPO_REF`
+
+Override example:
 ```bash
-make fixture-pull
+make apk PROVER_REPO_LOCAL_DIR=/path/to/vocdoni-passport-prover
 ```
 
-The release artifact is written to:
+## GitHub Actions Secrets
 
-- `out/apk/app-release.apk`
+For automated builds, configure these repository secrets:
 
-## Prover Dependency
+### iOS Release Builds
 
-The app build needs the `acvm-witness-jni` crate from `vocdoni-passport-prover`.
+| Secret | Description |
+|--------|-------------|
+| `IOS_DISTRIBUTION_CERTIFICATE_BASE64` | Base64-encoded .p12 distribution certificate |
+| `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` | Certificate password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Base64-encoded .mobileprovision file |
+| `KEYCHAIN_PASSWORD` | Temporary keychain password |
+| `APPLE_TEAM_ID` | Apple Developer Team ID |
+| `APP_STORE_CONNECT_API_KEY_ID` | App Store Connect API Key ID |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | App Store Connect Issuer ID |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | Base64-encoded .p8 API key |
 
-The Makefile resolves that dependency in this order:
+## Contributing
 
-1. `PROVER_REPO_LOCAL_DIR`
-2. `../vocdoni-passport-prover`
-3. `PROVER_REPO_URL` + `PROVER_REPO_REF`
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request.
 
-Useful overrides:
+### Code Style
 
-```bash
-make apk PROVER_REPO_LOCAL_DIR=../vocdoni-passport-prover
-make apk PROVER_REPO_URL=https://github.com/vocdoni/vocdoni-passport-prover.git PROVER_REPO_REF=main
-```
+- Run `npm run lint` before committing
+- Follow the existing code patterns
+- Write meaningful commit messages
 
-The staged prover source is local build data under `vendor/vocdoni-passport-prover/` and is not tracked.
+## Security
 
-## Runtime Flow
+This application handles sensitive identity data. Security considerations:
 
-1. Load a petition request from QR or a pasted request link.
-2. Ping the remote server health endpoint.
-3. Show the petition summary and disclosures.
-4. Capture the MRZ.
-5. Read the NFC chip.
-6. Generate inner proofs on device.
-7. Send the inner proof bundle to the server.
-8. Show the outer-proof success result or an error report.
+- All ID data is encrypted at rest using device-level encryption
+- Biometric/PIN authentication is required to access stored IDs
+- Zero-knowledge proofs ensure no personal data is transmitted
+- The app never sends raw identity documents to any server
 
-## Native Dependencies
+For security issues, please email security@vocdoni.io instead of opening a public issue.
 
-The app relies on two native proving components:
+## License
 
-- `barretenberg_jni`
-  Android native bridge for proving
-- `acvm-witness-jni`
-  Rust witness-solving JNI library built from the staged `vocdoni-passport-prover` source
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
-The Docker APK build compiles those components from pinned upstream inputs and the staged prover workspace.
+## Related Projects
 
-## Maintenance Rules
+- [vocdoni-passport-prover](https://github.com/vocdoni/vocdoni-passport-prover) - Server-side prover and verification
+- [zkPassport](https://zkpassport.id) - The underlying zero-knowledge passport protocol
 
-- Keep app-facing copy short and clear.
-- Keep proving and version decisions out of the app when they can live in the prover repository.
-- Avoid machine-specific paths and environment assumptions in scripts and docs.
+## Support
+
+- [Documentation](https://docs.vocdoni.io)
+- [Discord](https://discord.gg/vocdoni)
+- [Twitter](https://twitter.com/voaborrar)
+
+---
+
+Built with ❤️ by [Vocdoni](https://vocdoni.io)

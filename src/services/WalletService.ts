@@ -40,7 +40,7 @@ export async function hasWallet(): Promise<boolean> {
 export async function getWalletInfo(): Promise<StoredWalletInfo | null> {
   try {
     const info = await EncryptedStorage.getItem(WALLET_SETUP_KEY);
-    if (!info) return null;
+    if (!info) {return null;}
     return JSON.parse(info) as StoredWalletInfo;
   } catch {
     return null;
@@ -105,7 +105,7 @@ export async function createWallet(): Promise<WalletData | null> {
 export async function restoreWallet(phrase: string): Promise<WalletData | null> {
   try {
     const trimmedPhrase = phrase.trim().toLowerCase();
-    
+
     // Validate mnemonic
     if (!ethers.Mnemonic.isValidMnemonic(trimmedPhrase)) {
       console.error('[WalletService] Invalid mnemonic phrase');
@@ -148,18 +148,18 @@ export async function getWalletPhrase(): Promise<string | null> {
   try {
     // Authenticate before revealing phrase
     const { available } = await biometrics.isSensorAvailable();
-    
+
     if (available) {
       const { success, error } = await biometrics.simplePrompt({
         promptMessage: 'Authenticate to view recovery phrase',
         cancelButtonText: 'Cancel',
       });
-      
+
       if (error) {
         console.error('[WalletService] Biometric error:', error);
         return null;
       }
-      
+
       if (!success) {
         console.log('[WalletService] User cancelled authentication');
         return null;
@@ -197,7 +197,7 @@ export async function getWalletAddress(): Promise<string | null> {
 export async function getPrivateKey(): Promise<string | null> {
   try {
     const phrase = await getWalletPhrase();
-    if (!phrase) return null;
+    if (!phrase) {return null;}
 
     const mnemonic = ethers.Mnemonic.fromPhrase(phrase);
     const wallet = ethers.HDNodeWallet.fromMnemonic(mnemonic);

@@ -91,7 +91,7 @@ export function groupSignaturesByDate(records: SignatureRecord[]): Map<string, S
   for (const record of records) {
     const recordDate = new Date(record.timestamp);
     const recordDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate()).getTime();
-    
+
     let key: string;
     if (recordDay >= today) {
       key = 'Today';
@@ -100,11 +100,11 @@ export function groupSignaturesByDate(records: SignatureRecord[]): Map<string, S
     } else {
       key = recordDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
-    
+
     const existing = groups.get(key) || [];
     existing.push(record);
     groups.set(key, existing);
   }
-  
+
   return groups;
 }

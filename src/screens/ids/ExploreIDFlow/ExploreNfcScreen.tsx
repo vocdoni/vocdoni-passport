@@ -32,7 +32,7 @@ interface NfcProgress {
 export function ExploreNfcScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
-  
+
   const [status, setStatus] = useState('Preparing NFC reader...');
   const [progress, setProgress] = useState(0);
   const [scanning, setScanning] = useState(false);
@@ -77,14 +77,14 @@ export function ExploreNfcScreen() {
   }, [progress, progressAnim]);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android') {return;}
 
     const eventEmitter = new NativeEventEmitter(PassportReader);
     const subscription = eventEmitter.addListener('NfcProgress', (event: NfcProgress) => {
       console.log('[NFC Progress]', event);
       setProgress(event.percent);
       setStatus(event.message);
-      
+
       if (event.step === 'retry') {
         setRetryCount(prev => prev + 1);
       }
@@ -100,7 +100,7 @@ export function ExploreNfcScreen() {
       setError('NFC module not available on this device');
       return;
     }
-    
+
     const attempt = scanAttemptRef.current + 1;
     scanAttemptRef.current = attempt;
     setScanning(true);
@@ -117,11 +117,11 @@ export function ExploreNfcScreen() {
         dateOfExpiry,
       });
 
-      if (scanAttemptRef.current !== attempt) return;
+      if (scanAttemptRef.current !== attempt) {return;}
 
       setStatus('Document read successfully!');
       setProgress(100);
-      
+
       navigation.navigate('ExploreIDResult', {
         dg1: result.dg1,
         sod: result.sod,
@@ -134,11 +134,11 @@ export function ExploreNfcScreen() {
         dg15: result.dg15,
       });
     } catch (err: any) {
-      if (scanAttemptRef.current !== attempt) return;
-      
+      if (scanAttemptRef.current !== attempt) {return;}
+
       const message = err?.message || '';
       const code = String(err?.code || '');
-      
+
       if (code.includes('CANCELLED') || message === 'Scan cancelled') {
         setScanning(false);
         return;
@@ -160,13 +160,13 @@ export function ExploreNfcScreen() {
     setError('');
     setStatus('Restarting NFC reader...');
     setProgress(0);
-    
+
     try {
       if (typeof PassportReader?.cancelCurrentScan === 'function') {
         await PassportReader.cancelCurrentScan();
       }
     } catch {}
-    
+
     setTimeout(() => startScan(), 300);
   }, [startScan]);
 
@@ -189,7 +189,7 @@ export function ExploreNfcScreen() {
     <View style={commonStyles.safeArea}>
       <ScrollView contentContainerStyle={commonStyles.screenPad} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>🔬 Explore NFC</Text>
           <Text style={commonStyles.pageSubtitle}>
@@ -212,7 +212,7 @@ export function ExploreNfcScreen() {
               <Text style={styles.nfcDocIcon}>🪪</Text>
             </View>
           </View>
-          
+
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
@@ -221,13 +221,13 @@ export function ExploreNfcScreen() {
           </View>
 
           <Text style={styles.statusText}>{status}</Text>
-          
+
           {retryCount > 0 && (
             <View style={styles.retryBadge}>
               <Text style={styles.retryText}>Retry attempt {retryCount}/3</Text>
             </View>
           )}
-          
+
           {scanning && !error && (
             <Button label="Cancel" onPress={() => {
               scanAttemptRef.current += 1;
@@ -238,7 +238,7 @@ export function ExploreNfcScreen() {
               } catch {}
             }} variant="secondary" />
           )}
-          
+
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>

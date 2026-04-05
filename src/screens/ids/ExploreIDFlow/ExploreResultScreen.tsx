@@ -98,7 +98,7 @@ function extractMrzFromDG1(dg1Base64: string): string {
 
 function parseMrz(mrz: string): ParsedData['mrzFields'] {
   const clean = mrz.replace(/\n/g, '').replace(/ /g, '');
-  
+
   if (clean.length >= 88 && (clean[0] === 'P' || clean[0] === 'V')) {
     const names = clean.slice(5, 44).split('<<');
     return {
@@ -114,12 +114,12 @@ function parseMrz(mrz: string): ParsedData['mrzFields'] {
       optionalData1: clean.slice(71, 85).replace(/</g, ' ').trim() || undefined,
     };
   }
-  
+
   const line1 = clean.slice(0, 30);
   const line2 = clean.slice(30, 60);
   const line3 = clean.slice(60, 90);
   const names = line3.split('<<');
-  
+
   return {
     documentType: line1[0] === 'I' ? 'ID Card' : line1[0] === 'A' ? 'ID Card (Type A)' : 'Travel Document',
     issuingCountry: line1.slice(2, 5).replace(/</g, ''),
@@ -136,19 +136,19 @@ function parseMrz(mrz: string): ParsedData['mrzFields'] {
 }
 
 function formatDate(yymmdd: string): string {
-  if (yymmdd.length !== 6) return yymmdd;
+  if (yymmdd.length !== 6) {return yymmdd;}
   const yy = parseInt(yymmdd.slice(0, 2), 10);
   const year = yy >= 50 ? 1900 + yy : 2000 + yy;
   return `${year}-${yymmdd.slice(2, 4)}-${yymmdd.slice(4, 6)}`;
 }
 
 function extractPhotoFromDG2(dg2Base64?: string): string | undefined {
-  if (!dg2Base64) return undefined;
+  if (!dg2Base64) {return undefined;}
   try {
     const dg2 = Buffer.from(dg2Base64, 'base64');
     const jpegStart = findSequence(dg2, [0xff, 0xd8, 0xff]);
     const jp2Start = findSequence(dg2, [0x00, 0x00, 0x00, 0x0c, 0x6a, 0x50]);
-    
+
     if (jpegStart >= 0) {
       const jpegEnd = findSequence(dg2, [0xff, 0xd9], jpegStart);
       if (jpegEnd >= 0) {
@@ -156,11 +156,11 @@ function extractPhotoFromDG2(dg2Base64?: string): string | undefined {
       }
       return dg2.slice(jpegStart).toString('base64');
     }
-    
+
     if (jp2Start >= 0) {
       return dg2.slice(jp2Start).toString('base64');
     }
-    
+
     return undefined;
   } catch {
     return undefined;
@@ -176,13 +176,13 @@ function findSequence(buffer: Buffer, sequence: number[], startFrom = 0): number
         break;
       }
     }
-    if (found) return i;
+    if (found) {return i;}
   }
   return -1;
 }
 
 function extractImageFromDG7(dg7Base64?: string): string | undefined {
-  if (!dg7Base64) return undefined;
+  if (!dg7Base64) {return undefined;}
   try {
     const dg7 = Buffer.from(dg7Base64, 'base64');
     const jpegStart = findSequence(dg7, [0xff, 0xd8, 0xff]);
@@ -230,11 +230,11 @@ const DG12_TAGS: Record<number, string> = {
 };
 
 function parseTLV(data: Buffer, offset: number): { tag: number; length: number; value: Buffer; nextOffset: number } | null {
-  if (offset >= data.length) return null;
-  
+  if (offset >= data.length) {return null;}
+
   let tag = data[offset];
   let tagLen = 1;
-  
+
   // Multi-byte tag
   if ((tag & 0x1f) === 0x1f) {
     tag = (tag << 8) | data[offset + 1];
@@ -244,13 +244,13 @@ function parseTLV(data: Buffer, offset: number): { tag: number; length: number; 
       tagLen = 3;
     }
   }
-  
+
   let lenOffset = offset + tagLen;
-  if (lenOffset >= data.length) return null;
-  
+  if (lenOffset >= data.length) {return null;}
+
   let length = data[lenOffset];
   let lenBytes = 1;
-  
+
   if (length & 0x80) {
     const numLenBytes = length & 0x7f;
     length = 0;
@@ -259,10 +259,10 @@ function parseTLV(data: Buffer, offset: number): { tag: number; length: number; 
     }
     lenBytes = 1 + numLenBytes;
   }
-  
+
   const valueOffset = lenOffset + lenBytes;
-  if (valueOffset + length > data.length) return null;
-  
+  if (valueOffset + length > data.length) {return null;}
+
   return {
     tag,
     length,
@@ -274,23 +274,23 @@ function parseTLV(data: Buffer, offset: number): { tag: number; length: number; 
 function parseAllTLVs(data: Buffer): Array<{ tag: number; value: Buffer }> {
   const results: Array<{ tag: number; value: Buffer }> = [];
   let offset = 0;
-  
+
   while (offset < data.length) {
     const tlv = parseTLV(data, offset);
-    if (!tlv) break;
+    if (!tlv) {break;}
     results.push({ tag: tlv.tag, value: tlv.value });
     offset = tlv.nextOffset;
   }
-  
+
   return results;
 }
 
 function parseDG11(dg11Base64?: string): ParsedData['dg11Parsed'] | undefined {
-  if (!dg11Base64) return undefined;
+  if (!dg11Base64) {return undefined;}
   try {
     const dg11 = Buffer.from(dg11Base64, 'base64');
     const result: ParsedData['dg11Parsed'] = {};
-    
+
     // Skip the outer tag (usually 0x6B for DG11)
     let dataStart = 0;
     if (dg11[0] === 0x6b || dg11[0] === 0x6B) {
@@ -299,21 +299,21 @@ function parseDG11(dg11Base64?: string): ParsedData['dg11Parsed'] | undefined {
         dataStart = dg11.length - outerTlv.length;
       }
     }
-    
+
     const tlvs = parseAllTLVs(dg11.slice(dataStart));
-    
+
     for (const { tag, value } of tlvs) {
       const fieldName = DG11_TAGS[tag];
-      if (!fieldName) continue;
-      
+      if (!fieldName) {continue;}
+
       const strValue = value.toString('utf8').replace(/</g, ' ').trim();
-      
+
       switch (fieldName) {
         case 'fullNameOfHolder':
           result.fullNameOfHolder = strValue;
           break;
         case 'otherNames':
-          if (!result.otherNames) result.otherNames = [];
+          if (!result.otherNames) {result.otherNames = [];}
           result.otherNames.push(strValue);
           break;
         case 'personalNumber':
@@ -345,7 +345,7 @@ function parseDG11(dg11Base64?: string): ParsedData['dg11Parsed'] | undefined {
           break;
       }
     }
-    
+
     // Fallback: try to extract readable text if TLV parsing found nothing
     if (Object.keys(result).length === 0) {
       const textContent = dg11.toString('utf8').replace(/[\x00-\x1f]/g, ' ').replace(/</g, ' ').trim();
@@ -353,7 +353,7 @@ function parseDG11(dg11Base64?: string): ParsedData['dg11Parsed'] | undefined {
         result.personalSummary = textContent;
       }
     }
-    
+
     return Object.keys(result).length > 0 ? result : undefined;
   } catch (e) {
     console.warn('Failed to parse DG11:', e);
@@ -362,11 +362,11 @@ function parseDG11(dg11Base64?: string): ParsedData['dg11Parsed'] | undefined {
 }
 
 function parseDG12(dg12Base64?: string): ParsedData['dg12Parsed'] | undefined {
-  if (!dg12Base64) return undefined;
+  if (!dg12Base64) {return undefined;}
   try {
     const dg12 = Buffer.from(dg12Base64, 'base64');
     const result: ParsedData['dg12Parsed'] = {};
-    
+
     // Skip the outer tag (usually 0x6C for DG12)
     let dataStart = 0;
     if (dg12[0] === 0x6c || dg12[0] === 0x6C) {
@@ -375,15 +375,15 @@ function parseDG12(dg12Base64?: string): ParsedData['dg12Parsed'] | undefined {
         dataStart = dg12.length - outerTlv.length;
       }
     }
-    
+
     const tlvs = parseAllTLVs(dg12.slice(dataStart));
-    
+
     for (const { tag, value } of tlvs) {
       const fieldName = DG12_TAGS[tag];
-      if (!fieldName) continue;
-      
+      if (!fieldName) {continue;}
+
       const strValue = value.toString('utf8').replace(/</g, ' ').trim();
-      
+
       switch (fieldName) {
         case 'issuingAuthority':
           result.issuingAuthority = strValue;
@@ -392,7 +392,7 @@ function parseDG12(dg12Base64?: string): ParsedData['dg12Parsed'] | undefined {
           result.dateOfIssue = strValue;
           break;
         case 'otherPersons':
-          if (!result.otherPersons) result.otherPersons = [];
+          if (!result.otherPersons) {result.otherPersons = [];}
           result.otherPersons.push(strValue);
           break;
         case 'endorsements':
@@ -403,7 +403,7 @@ function parseDG12(dg12Base64?: string): ParsedData['dg12Parsed'] | undefined {
           break;
       }
     }
-    
+
     // Fallback: try to extract readable text if TLV parsing found nothing
     if (Object.keys(result).length === 0) {
       const textContent = dg12.toString('utf8').replace(/[\x00-\x1f]/g, ' ').replace(/</g, ' ').trim();
@@ -411,7 +411,7 @@ function parseDG12(dg12Base64?: string): ParsedData['dg12Parsed'] | undefined {
         result.issuingAuthority = textContent;
       }
     }
-    
+
     return Object.keys(result).length > 0 ? result : undefined;
   } catch (e) {
     console.warn('Failed to parse DG12:', e);
@@ -425,10 +425,10 @@ function parseSOD(sodBase64: string): ParsedData['sodInfo'] {
     signatureAlgorithm: 'Unknown',
     dataGroupHashes: [],
   };
-  
+
   try {
     const sod = Buffer.from(sodBase64, 'base64');
-    
+
     if (sod.includes(Buffer.from('SHA-256')) || sod.includes(Buffer.from([0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]))) {
       info.hashAlgorithm = 'SHA-256';
     } else if (sod.includes(Buffer.from('SHA-1')) || sod.includes(Buffer.from([0x2b, 0x0e, 0x03, 0x02, 0x1a]))) {
@@ -438,7 +438,7 @@ function parseSOD(sodBase64: string): ParsedData['sodInfo'] {
     } else if (sod.includes(Buffer.from('SHA-512'))) {
       info.hashAlgorithm = 'SHA-512';
     }
-    
+
     if (sod.includes(Buffer.from([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b]))) {
       info.signatureAlgorithm = 'RSA-SHA256';
     } else if (sod.includes(Buffer.from([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05]))) {
@@ -448,11 +448,11 @@ function parseSOD(sodBase64: string): ParsedData['sodInfo'] {
     } else if (sod.includes(Buffer.from([0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03]))) {
       info.signatureAlgorithm = 'ECDSA-SHA384';
     }
-    
+
   } catch (e) {
     console.warn('Failed to parse SOD:', e);
   }
-  
+
   return info;
 }
 
@@ -460,7 +460,7 @@ export function ExploreResultScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
   const { dg1, sod, dg2, dg7, dg11, dg12, dg13, dg14, dg15 } = route.params;
-  
+
   const [parsed, setParsed] = useState<ParsedData | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mrz', 'photo']));
 
@@ -472,7 +472,7 @@ export function ExploreResultScreen() {
     const sodInfo = parseSOD(sod);
     const dg11Parsed = parseDG11(dg11);
     const dg12Parsed = parseDG12(dg12);
-    
+
     setParsed({
       mrz,
       mrzFields,
@@ -521,7 +521,7 @@ export function ExploreResultScreen() {
     <View style={commonStyles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.popToTop()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>🔬 ID Explorer</Text>
           <Text style={commonStyles.pageSubtitle}>
@@ -854,7 +854,7 @@ export function ExploreResultScreen() {
           {parsed.dg14Raw && <DataRow label="DG14 (Security)" value={`${parsed.dg14Raw.length} chars`} />}
           {parsed.dg15Raw && <DataRow label="DG15 (AA Key)" value={`${parsed.dg15Raw.length} chars`} />}
           <DataRow label="SOD" value={`${sod.length} chars`} />
-          
+
           <View style={styles.copyButtonsRow}>
             <TouchableOpacity
               style={styles.copyButton}
@@ -912,15 +912,15 @@ export function ExploreResultScreen() {
   );
 }
 
-function CollapsibleSection({ 
-  title, 
-  expanded, 
-  onToggle, 
-  children 
-}: { 
-  title: string; 
-  expanded: boolean; 
-  onToggle: () => void; 
+function CollapsibleSection({
+  title,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (

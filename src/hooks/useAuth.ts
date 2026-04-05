@@ -57,7 +57,7 @@ export function useAuth() {
 
       // Check if biometrics/device credentials are available
       const { available } = await biometrics.isSensorAvailable();
-      
+
       if (!available) {
         // No biometrics and no device credentials available
         // This means device has no security - allow access
@@ -128,7 +128,7 @@ export async function authenticateForSigning(): Promise<boolean> {
   try {
     // Check if biometrics/device credentials are available
     const { available } = await biometrics.isSensorAvailable();
-    
+
     if (!available) {
       // No security available on device - allow signing
       // (user chose to have an unsecured device)

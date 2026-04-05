@@ -41,21 +41,21 @@ export function parseSOD(sod: Uint8Array): SODParsed {
     let startOffset = 0;
     if (sod[0] === 0x77) {
       const wrapper = parseTLV(sod, 0);
-      if (wrapper) startOffset = wrapper.contentStart;
+      if (wrapper) {startOffset = wrapper.contentStart;}
     }
 
     const outer = parseTLV(sod, startOffset);
-    if (!outer) return result;
+    if (!outer) {return result;}
 
     // Find the SignedData content (tagged [0])
     let pos = outer.contentStart;
     while (pos < outer.contentStart + outer.contentLength) {
       const tlv = parseTLV(sod, pos);
-      if (!tlv) break;
+      if (!tlv) {break;}
       if (tlv.tag === 0xa0) {
         // SignedData SEQUENCE inside the [0] context tag
         const sd = parseTLV(sod, tlv.contentStart);
-        if (sd) parseSignedData(sod, sd.contentStart, sd.contentLength, result);
+        if (sd) {parseSignedData(sod, sd.contentStart, sd.contentLength, result);}
         break;
       }
       pos = tlv.contentStart + tlv.contentLength;
@@ -76,7 +76,7 @@ function parseSignedData(
 
   while (pos < end) {
     const tlv = parseTLV(buf, pos);
-    if (!tlv) break;
+    if (!tlv) {break;}
 
     if (fieldIndex === 1 && tlv.tag === 0x31) {
       // SET OF DigestAlgorithmIdentifier
@@ -95,7 +95,7 @@ function parseSignedData(
       const eEnd = tlv.contentStart + tlv.contentLength;
       while (ePos < eEnd) {
         const eTlv = parseTLV(buf, ePos);
-        if (!eTlv) break;
+        if (!eTlv) {break;}
         if (eTlv.tag === 0xa0) {
           const octet = parseTLV(buf, eTlv.contentStart);
           if (octet) {
@@ -117,7 +117,7 @@ function parseSignedData(
     if (tlv.tag === 0x31 && fieldIndex >= 4) {
       // SET OF SignerInfo
       const siSeq = parseTLV(buf, tlv.contentStart);
-      if (siSeq) parseSignerInfo(buf, siSeq.contentStart, siSeq.contentLength, result);
+      if (siSeq) {parseSignerInfo(buf, siSeq.contentStart, siSeq.contentLength, result);}
     }
 
     pos = tlv.contentStart + tlv.contentLength;
@@ -134,7 +134,7 @@ function parseCertificate(
 
   while (pos < end) {
     const tlv = parseTLV(buf, pos);
-    if (!tlv) break;
+    if (!tlv) {break;}
     if (fi === 0 && tlv.tag === 0x30) {
       // TBSCertificate
       result.tbsCertificate = Array.from(buf.slice(pos, tlv.contentStart + tlv.contentLength));
@@ -164,7 +164,7 @@ function parseSignerInfo(
 
   while (pos < end) {
     const tlv = parseTLV(buf, pos);
-    if (!tlv) break;
+    if (!tlv) {break;}
     if (tlv.tag === 0xa0) {
       // [0] signedAttrs - IMPORTANT: for hash verification, we need the raw DER
       // but with tag changed from IMPLICIT [0] (0xa0) to SET (0x31)
@@ -190,10 +190,10 @@ interface TLV {
 }
 
 function parseTLV(buf: Uint8Array, offset: number): TLV | null {
-  if (offset >= buf.length) return null;
+  if (offset >= buf.length) {return null;}
   const tag = buf[offset];
   let pos = offset + 1;
-  if (pos >= buf.length) return null;
+  if (pos >= buf.length) {return null;}
 
   let length = buf[pos++];
   if (length === 0x80) {
@@ -204,7 +204,7 @@ function parseTLV(buf: Uint8Array, offset: number): TLV | null {
     const numBytes = length & 0x7f;
     length = 0;
     for (let i = 0; i < numBytes; i++) {
-      if (pos >= buf.length) return null;
+      if (pos >= buf.length) {return null;}
       length = (length << 8) | buf[pos++];
     }
   }
@@ -213,7 +213,7 @@ function parseTLV(buf: Uint8Array, offset: number): TLV | null {
 }
 
 function oidToString(bytes: Uint8Array): string {
-  if (bytes.length === 0) return '';
+  if (bytes.length === 0) {return '';}
   const parts: number[] = [Math.floor(bytes[0] / 40), bytes[0] % 40];
   let val = 0;
   for (let i = 1; i < bytes.length; i++) {
@@ -256,15 +256,15 @@ export function detectKeySize(tbsCert: number[]): number {
       if (len > 0x80) {
         const nb = len & 0x7f;
         len = 0;
-        for (let j = 0; j < nb; j++) len = (len << 8) | tbsCert[pos++];
+        for (let j = 0; j < nb; j++) {len = (len << 8) | tbsCert[pos++];}
       }
-      if (len > maxIntLen) maxIntLen = len;
+      if (len > maxIntLen) {maxIntLen = len;}
     }
   }
   // Modulus length in bytes → key size in bits
-  if (maxIntLen >= 512) return 4096;
-  if (maxIntLen >= 384) return 3072;
-  if (maxIntLen >= 256) return 2048;
-  if (maxIntLen >= 128) return 1024;
+  if (maxIntLen >= 512) {return 4096;}
+  if (maxIntLen >= 384) {return 3072;}
+  if (maxIntLen >= 256) {return 2048;}
+  if (maxIntLen >= 128) {return 1024;}
   return 2048; // default
 }

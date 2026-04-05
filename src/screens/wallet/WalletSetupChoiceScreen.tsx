@@ -25,17 +25,17 @@ export function WalletSetupChoiceScreen() {
         </View>
 
         <Text style={styles.title}>Set Up Your Digital Identity</Text>
-        
+
         <Text style={styles.description}>
-          Your digital identity is a secure wallet that will be used to interact 
-          with Vocdoni services. It's protected by a 12-word recovery phrase that 
+          Your digital identity is a secure wallet that will be used to interact
+          with Vocdoni services. It's protected by a 12-word recovery phrase that
           only you control.
         </Text>
 
         <View style={styles.infoBox}>
           <Text style={styles.infoIcon}>💡</Text>
           <Text style={styles.infoText}>
-            Your recovery phrase is the only way to restore your identity. 
+            Your recovery phrase is the only way to restore your identity.
             Keep it safe and never share it with anyone.
           </Text>
         </View>
@@ -46,7 +46,7 @@ export function WalletSetupChoiceScreen() {
             onPress={() => navigation.navigate('WalletCreate')}
             variant="primary"
           />
-          
+
           <Button
             label="Restore Existing Identity"
             onPress={() => navigation.navigate('WalletRestore')}

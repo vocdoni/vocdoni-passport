@@ -1,9 +1,52 @@
-# OSX
+# Vocdoni Passport - Git Ignore Configuration
 #
-.DS_Store
+# This file specifies intentionally untracked files to ignore.
+# See: https://git-scm.com/docs/gitignore
 
-# Xcode
-#
+# =============================================================================
+# Operating System Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+# =============================================================================
+# IDE and Editor Files
+# =============================================================================
+
+# JetBrains (IntelliJ, Android Studio, WebStorm)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Xcode / iOS
+# =============================================================================
+
 build/
 *.pbxuser
 !default.pbxuser
@@ -13,71 +56,134 @@ build/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
-xcuserdata
+xcuserdata/
 *.xccheckout
 *.moved-aside
-DerivedData
+DerivedData/
 *.hmap
 *.ipa
+*.dSYM.zip
+*.dSYM
 *.xcuserstate
 **/.xcode.env.local
 
-# Android/IntelliJ
-#
+# CocoaPods
+**/Pods/
+Podfile.lock
+
+# =============================================================================
+# Android
+# =============================================================================
+
+# Gradle
+.gradle/
 build/
-.idea
-.gradle
 local.properties
+
+# Android Studio
 *.iml
-*.hprof
 .cxx/
+captures/
+
+# Keystore files (SECURITY: Never commit production keystores)
 *.keystore
+*.jks
 !debug.keystore
 
-# Docker APK debug builds (Makefile touches this to bust COPY cache)
-.docker-build-stamp
+# Profiling
+*.hprof
 
-# node.js
-#
+# =============================================================================
+# Node.js / JavaScript
+# =============================================================================
+
 node_modules/
-npm-debug.log
-yarn-error.log
-
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
-
-**/fastlane/report.xml
-**/fastlane/Preview.html
-**/fastlane/screenshots
-**/fastlane/test_output
-
-# Bundle artifact
-*.jsbundle
-
-# Ruby / CocoaPods
-**/Pods/
-/vendor/bundle/
-
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
-# testing
-/coverage
-
-# local build and capture data
-/.cache/
-/fixtures/real/
-/out/
-/vendor/vocdoni-passport-prover/
-
-# Yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Bundle artifacts
+*.jsbundle
+
+# Metro bundler
+.metro-health-check*
+
+# =============================================================================
+# Ruby / Bundler
+# =============================================================================
+
+/vendor/bundle/
+.bundle/
+Gemfile.lock
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+/coverage/
+*.lcov
+.nyc_output/
+
+# =============================================================================
+# Fastlane
+# =============================================================================
+
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/
+**/fastlane/test_output/
+
+# =============================================================================
+# Build Outputs and Caches
+# =============================================================================
+
+# Local build artifacts
+/.cache/
+/out/
+/dist/
+
+# Vendor dependencies (fetched at build time)
+/vendor/vocdoni-passport-prover/
+
+# Test fixtures (may contain sensitive data)
+/fixtures/real/
+
+# Docker build cache busting
+.docker-build-stamp
+
+# =============================================================================
+# Security - NEVER commit these files
+# =============================================================================
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Certificates and keys
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision
+
+# API keys and tokens
+secrets.json
+credentials.json
+google-services.json
+GoogleService-Info.plist
+
+# =============================================================================
+# Logs
+# =============================================================================
+
+*.log
+logs/

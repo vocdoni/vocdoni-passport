@@ -27,9 +27,9 @@ export type IDsStackParamList = {
   // Debug/Development screens
   ExploreIDMrz: undefined;
   ExploreIDNfc: { documentNumber: string; dateOfBirth: string; dateOfExpiry: string };
-  ExploreIDResult: { 
-    dg1: string; 
-    sod: string; 
+  ExploreIDResult: {
+    dg1: string;
+    sod: string;
     dg2?: string;
     dg7?: string;
     dg11?: string;
@@ -55,9 +55,9 @@ export type SigningStackParamList = {
   SelectID: { request: ProofRequestPayload };
   DisclosureReview: { request: ProofRequestPayload; selectedIdRef: string };
   ProofProgress: { request: ProofRequestPayload; selectedIdRef: string };
-  SigningSuccess: { 
-    request: ProofRequestPayload; 
-    nullifier?: string; 
+  SigningSuccess: {
+    request: ProofRequestPayload;
+    nullifier?: string;
     durationMs: number;
     proofName?: string;
   };
@@ -71,10 +71,10 @@ export type RootStackParamList = {
   AuthLock: undefined;
 };
 
-export type RootStackScreenProps<T extends keyof RootStackParamList> = 
+export type RootStackScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
 
-export type TabScreenProps<T extends keyof TabParamList> = 
+export type TabScreenProps<T extends keyof TabParamList> =
   CompositeScreenProps<
     BottomTabScreenProps<TabParamList, T>,
     RootStackScreenProps<keyof RootStackParamList>

@@ -205,7 +205,7 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   const { dscName, idDataName, integrityName, debug } = await deriveCircuitNames(passport, packagedCerts, manifest, outerName);
   const circuitNames = [dscName, idDataName, integrityName, ...disclosurePlans.map((p) => p.circuitName), outerName];
   for (const name of circuitNames) {
-    if (!manifest?.circuits?.[name]) throw new Error(`Required circuit not found in manifest: ${name}`);
+    if (!manifest?.circuits?.[name]) {throw new Error(`Required circuit not found in manifest: ${name}`);}
   }
   onP('circuits', `DSC: ${debug.dsc}`);
   onP('circuits', `ID : ${debug.id}`);
@@ -253,9 +253,9 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
     `${dscName},${idDataName},${integrityName}`,
   );
 
-  if (!dscInputs) throw new Error('Could not derive DSC inputs');
-  if (!idInputs) throw new Error('Could not derive ID data inputs');
-  if (!integrityInputs) throw new Error('Could not derive integrity inputs');
+  if (!dscInputs) {throw new Error('Could not derive DSC inputs');}
+  if (!idInputs) {throw new Error('Could not derive ID data inputs');}
+  if (!integrityInputs) {throw new Error('Could not derive integrity inputs');}
 
   onP('prove', `[1/${3 + disclosureCount}] ${dscName}`);
   const dscProof = await fetchAndProveInnerCircuit(registry, manifest, dscName, dscInputs, onP);
@@ -285,7 +285,7 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
     );
     if (!disclosureInputs) {
       console.error(`[ProofGenerator] disclosureInputs is null/undefined for ${plan.circuitName}`);
-      console.error(`[ProofGenerator] Query:`, JSON.stringify(normalizedQuery, null, 2));
+      console.error('[ProofGenerator] Query:', JSON.stringify(normalizedQuery, null, 2));
       throw new Error(`Could not derive inputs for ${plan.circuitName}`);
     }
     onP('prove', `[${step}/${3 + disclosureCount}] ${plan.circuitName}`);
@@ -359,7 +359,7 @@ export async function preloadRequestProofAssets(requestQuery: Query | null | und
 
 async function fetchAndProveInnerCircuit(registry: RegistryClient, manifest: any, name: string, inputs: Record<string, any>, onP: ProgressFn): Promise<OuterCircuitProof> {
   const ch = manifest?.circuits?.[name]?.hash;
-  if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
+  if (!ch) {throw new Error(`No circuit hash in manifest for ${name}`);}
   onP('download', `Circuit ${name} (cache or network)...`);
   const prepared = await timed(`circuit.ready.${name}`, () => ensurePreparedCircuit(registry, manifest, name), name);
   onP('download', `  ${name} OK`);
@@ -396,7 +396,7 @@ async function ensureCertificates(registry: RegistryClient, certRoot: string): P
 
 async function ensurePackagedCircuit(registry: RegistryClient, manifest: any, name: string): Promise<any> {
   const ch = manifest?.circuits?.[name]?.hash;
-  if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
+  if (!ch) {throw new Error(`No circuit hash in manifest for ${name}`);}
   const cached = sessionPackagedCircuitCache.get(String(ch));
   if (cached?.bytecode && cached?.vkey) {
     return cached;
@@ -412,7 +412,7 @@ async function ensurePackagedCircuit(registry: RegistryClient, manifest: any, na
 
 async function ensurePreparedCircuit(registry: RegistryClient, manifest: any, name: string): Promise<PreparedCircuitArtifact> {
   const ch = String(manifest?.circuits?.[name]?.hash || '');
-  if (!ch) throw new Error(`No circuit hash in manifest for ${name}`);
+  if (!ch) {throw new Error(`No circuit hash in manifest for ${name}`);}
   const cached = sessionPreparedCircuitCache.get(ch);
   if (cached) {
     return cached;
@@ -467,16 +467,16 @@ async function proveRawCircuit(name: string, prepared: PreparedCircuitArtifact, 
   } catch (err: any) {
     const msg = err?.message || String(err);
     console.error(`[ProofGenerator] ${name} failed: ${msg}`);
-    if (err?.stack) console.error(err.stack);
+    if (err?.stack) {console.error(err.stack);}
     throw new Error(`${name} failed: ${msg}`);
   } finally {
-    if (witness) witness = new Uint8Array(0);
+    if (witness) {witness = new Uint8Array(0);}
   }
 }
 
 async function computeCircuitMerkleProofForName(manifest: any, name: string): Promise<{ path: string[]; index: number }> {
   const circuitHash = manifest.circuits?.[name]?.hash;
-  if (!circuitHash) throw new Error(`Circuit ${name} not found in manifest`);
+  if (!circuitHash) {throw new Error(`Circuit ${name} not found in manifest`);}
   const cached = sessionMerkleProofCache.get(String(circuitHash));
   if (cached) {
     return cached;
@@ -491,9 +491,9 @@ async function computeCircuitMerkleProofForName(manifest: any, name: string): Pr
 }
 
 function toFieldHex(value: any): string {
-  if (typeof value === 'string') return value.startsWith('0x') ? value : `0x${value}`;
-  if (value instanceof Uint8Array) return `0x${Buffer.from(value).toString('hex')}`;
-  if (Array.isArray(value) && value.every((x) => typeof x === 'number')) return `0x${Buffer.from(value).toString('hex')}`;
+  if (typeof value === 'string') {return value.startsWith('0x') ? value : `0x${value}`;}
+  if (value instanceof Uint8Array) {return `0x${Buffer.from(value).toString('hex')}`;}
+  if (Array.isArray(value) && value.every((x) => typeof x === 'number')) {return `0x${Buffer.from(value).toString('hex')}`;}
   return `0x${BigInt(value).toString(16)}`;
 }
 
@@ -608,7 +608,7 @@ const STANDARD_DISCLOSE_FIELDS = new Set([
 function normalizeRequestQuery(query?: ExtendedQuery | null): ExtendedQuery {
   const q = (query && typeof query === 'object') ? query : {};
   const filtered: Record<string, any> = {};
-  
+
   for (const key of Object.keys(q as any)) {
     if (!ALLOWED_QUERY_FIELDS.has(key)) {
       throw new Error(`Unsupported request query key: ${key}`);
@@ -620,7 +620,7 @@ function normalizeRequestQuery(query?: ExtendedQuery | null): ExtendedQuery {
     }
     filtered[key] = (q as any)[key];
   }
-  
+
   if (Object.keys(filtered).length === 0) {
     return { nationality: { disclose: true } } as ExtendedQuery;
   }
@@ -644,9 +644,9 @@ function buildExtendedDiscloseMask(passport: any, query: ExtendedQuery): number[
 
   // Standard fields
   for (const [field, cfg] of Object.entries(query)) {
-    if (!cfg || typeof cfg !== 'object') continue;
+    if (!cfg || typeof cfg !== 'object') {continue;}
     const config = cfg as { disclose?: boolean; eq?: any };
-    if (!config.disclose && !config.eq) continue;
+    if (!config.disclose && !config.eq) {continue;}
 
     // Handle standard fields
     if (STANDARD_DISCLOSE_FIELDS.has(field)) {
@@ -692,19 +692,19 @@ async function getExtendedDiscloseCircuitInputs(
 
   console.log('[getExtendedDiscloseCircuitInputs] Getting base inputs from SDK with query:', Object.keys(baseQuery));
   console.log('[getExtendedDiscloseCircuitInputs] nullifierSecret:', nullifierSecret, '(should be 0n for passport-derived nullifier)');
-  
+
   try {
     // Get base inputs from SDK - nullifierSecret=0n means nullifier is computed from passport data
     const baseInputs = await getDiscloseCircuitInputs(
       passport, baseQuery as Query, salts, nullifierSecret,
       serviceScope, serviceSubscope, currentDateTimestamp
     );
-    
+
     if (!baseInputs) {
       console.error('[getExtendedDiscloseCircuitInputs] SDK getDiscloseCircuitInputs returned null');
       return null;
     }
-    
+
     console.log('[getExtendedDiscloseCircuitInputs] Got base inputs from SDK');
 
     // If we have extended fields, override the mask
@@ -794,7 +794,7 @@ function buildDisclosurePlans(query: ExtendedQuery, walletAddress?: string): Dis
 async function deriveCircuitNames(passport: any, packagedCerts: any, manifest: any, outerName: string) {
   const tbsBucket = getTBSMaxLen(passport);
   const csca = await getCscaForPassportAsync(passport.sod.certificate, packagedCerts.certificates);
-  if (!csca) throw new Error('Could not match CSCA from certificate registry');
+  if (!csca) {throw new Error('Could not match CSCA from certificate registry');}
 
   const dscHash = normalizeHashName(String(getDSCSignatureHashAlgorithm(passport.sod.certificate) || 'SHA256'));
   const sodHash = normalizeHashName(String(getSodSignatureAlgorithmHashAlgorithm(passport) || 'sha256'));
@@ -811,7 +811,7 @@ async function deriveCircuitNames(passport: any, packagedCerts: any, manifest: a
   }
 
   const tbs = extractTBS(passport);
-  if (!tbs) throw new Error('Could not extract DSC TBS certificate');
+  if (!tbs) {throw new Error('Could not extract DSC TBS certificate');}
   const spki = tbs.subjectPublicKeyInfo;
   const sodSigAlg = String(passport.sod.signerInfo.signatureAlgorithm.name || '').toLowerCase();
 
@@ -852,7 +852,7 @@ function extractMrzFromDG1(dg1: Uint8Array): string {
     if (dg1[i] === 0x5f && dg1[i + 1] === 0x1f) {
       const len = dg1[i + 2];
       const start = i + 3;
-      if (start + len <= dg1.length) return Buffer.from(dg1.slice(start, start + len)).toString('ascii');
+      if (start + len <= dg1.length) {return Buffer.from(dg1.slice(start, start + len)).toString('ascii');}
     }
   }
   return Buffer.from(dg1).toString('ascii');
@@ -891,10 +891,10 @@ function parseMrz(mrz: string) {
 
 function normalizeHashName(value: string): string {
   const v = value.toLowerCase().replace(/-/g, '');
-  if (v.includes('512')) return 'sha512';
-  if (v.includes('384')) return 'sha384';
-  if (v.includes('224')) return 'sha224';
-  if (v.includes('1')) return 'sha1';
+  if (v.includes('512')) {return 'sha512';}
+  if (v.includes('384')) {return 'sha384';}
+  if (v.includes('224')) {return 'sha224';}
+  if (v.includes('1')) {return 'sha1';}
   return 'sha256';
 }
 
@@ -921,12 +921,12 @@ function curveToCircuitToken(curve: string): string {
     brainpoolP512t1: 'brainpool_512t1',
   };
   const token = map[curve];
-  if (!token) throw new Error(`Unsupported ECDSA curve for circuit selection: ${curve}`);
+  if (!token) {throw new Error(`Unsupported ECDSA curve for circuit selection: ${curve}`);}
   return token;
 }
 
 function randomBigInt(): bigint {
   const b = new Uint8Array(31);
-  for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
+  for (let i = 0; i < b.length; i++) {b[i] = Math.floor(Math.random() * 256);}
   return BigInt(`0x${Buffer.from(b).toString('hex')}`);
 }

@@ -13,7 +13,7 @@ type RemoteFileInfo = {
 
 function nextPowerOfTwo(n: number): number {
   let p = 1;
-  while (p < Math.max(1, n)) p <<= 1;
+  while (p < Math.max(1, n)) {p <<= 1;}
   return p;
 }
 
@@ -24,7 +24,7 @@ function crsDir(): string {
 async function ensureDir(): Promise<string> {
   const dir = crsDir();
   const exists = await RNFS.exists(dir);
-  if (!exists) await RNFS.mkdir(dir);
+  if (!exists) {await RNFS.mkdir(dir);}
   return dir;
 }
 
@@ -38,15 +38,15 @@ async function fileSize(path: string): Promise<number> {
 }
 
 function parseContentLength(v: string | null): number | undefined {
-  if (!v) return undefined;
+  if (!v) {return undefined;}
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
 function parseContentRangeTotal(v: string | null): number | undefined {
-  if (!v) return undefined;
+  if (!v) {return undefined;}
   const m = /bytes\s+\d+-\d+\/(\d+|\*)/i.exec(v);
-  if (!m || m[1] === '*') return undefined;
+  if (!m || m[1] === '*') {return undefined;}
   const n = Number(m[1]);
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
@@ -94,7 +94,7 @@ async function downloadWhole(url: string, dest: string, onP: ProgressFn, label: 
   }
 
   const tmp = `${dest}.full.part`;
-  if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+  if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
 
   onP('crs', `Downloading ${label} (full)...`);
   const res = await RNFS.downloadFile({
@@ -110,17 +110,17 @@ async function downloadWhole(url: string, dest: string, onP: ProgressFn, label: 
 
   onP('crs', `${label} full HTTP ${res.statusCode || 'unknown'}`);
   if (res.statusCode && res.statusCode >= 300) {
-    if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+    if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
     throw new Error(`${label} full download failed with HTTP ${res.statusCode}`);
   }
 
   const downloaded = await fileSize(tmp);
   if (downloaded <= 0) {
-    if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+    if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
     throw new Error(`${label} full download produced empty file`);
   }
 
-  if (await RNFS.exists(dest)) await RNFS.unlink(dest);
+  if (await RNFS.exists(dest)) {await RNFS.unlink(dest);}
   await RNFS.moveFile(tmp, dest);
 
   const finalSize = await fileSize(dest);
@@ -156,7 +156,7 @@ async function downloadRangeOrWhole(url: string, dest: string, bytesNeeded: numb
   const from = current;
   const to = effectiveNeed - 1;
   const tmp = `${dest}.range.part`;
-  if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+  if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
 
   onP('crs', `Downloading ${label} bytes ${from}-${to}...`);
   const res = await RNFS.downloadFile({
@@ -175,7 +175,7 @@ async function downloadRangeOrWhole(url: string, dest: string, bytesNeeded: numb
   onP('crs', `${label} HTTP ${res.statusCode || 'unknown'}`);
 
   if (res.statusCode === 416) {
-    if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+    if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
     const after416Current = await fileSize(dest);
     const reprobe = await probeRemoteFile(url, onP, `${label} after-416`);
     const remoteSize = reprobe.size ?? remote.size;
@@ -193,13 +193,13 @@ async function downloadRangeOrWhole(url: string, dest: string, bytesNeeded: numb
   }
 
   if (res.statusCode && res.statusCode !== 206 && res.statusCode !== 200) {
-    if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+    if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
     throw new Error(`${label} range download failed with HTTP ${res.statusCode}`);
   }
 
   const tmpSize = await fileSize(tmp);
   if (tmpSize <= 0) {
-    if (await RNFS.exists(tmp)) await RNFS.unlink(tmp);
+    if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
     throw new Error(`${label} range download produced empty file`);
   }
 

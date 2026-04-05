@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
-import { colors, borderRadius } from './styles';
+import { colors, borderRadius as br } from './styles';
 
 interface ButtonProps {
   label: string;
@@ -36,9 +36,9 @@ export function Button({
       disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={variant === 'primary' || variant === 'danger' ? '#fff' : colors.primary} 
+        <ActivityIndicator
+          size="small"
+          color={variant === 'primary' || variant === 'danger' ? '#fff' : colors.primary}
         />
       ) : (
         <View style={styles.content}>
@@ -70,7 +70,7 @@ export function TextButton({ label, onPress }: { label: string; onPress: () => v
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: borderRadius.lg,
+    borderRadius: br.lg,
     paddingVertical: 15,
     paddingHorizontal: 16,
     alignItems: 'center',

@@ -29,7 +29,7 @@ export function WalletSetupCompleteScreen() {
 
   return (
     <View style={commonStyles.safeArea}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -42,9 +42,9 @@ export function WalletSetupCompleteScreen() {
         </View>
 
         <Text style={styles.title}>Identity Created!</Text>
-        
+
         <Text style={styles.description}>
-          Your digital identity has been set up successfully. You can now use 
+          Your digital identity has been set up successfully. You can now use
           Vocdoni Passport to sign petitions and verify your identity.
         </Text>
 
@@ -70,7 +70,7 @@ export function WalletSetupCompleteScreen() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>📝</Text>
             <View style={styles.featureContent}>
@@ -80,7 +80,7 @@ export function WalletSetupCompleteScreen() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>🔄</Text>
             <View style={styles.featureContent}>

@@ -19,11 +19,11 @@ export interface CircuitABI {
 }
 
 function typeFieldCount(type: any): number {
-  if (!type) return 1;
+  if (!type) {return 1;}
   const kind = type.kind;
-  if (kind === 'field' || kind === 'boolean' || kind === 'integer') return 1;
-  if (kind === 'string') return type.length || 1;
-  if (kind === 'array') return (type.length || 0) * typeFieldCount(type.type);
+  if (kind === 'field' || kind === 'boolean' || kind === 'integer') {return 1;}
+  if (kind === 'string') {return type.length || 1;}
+  if (kind === 'array') {return (type.length || 0) * typeFieldCount(type.type);}
   if (kind === 'struct') {
     return (type.fields || []).reduce((sum: number, f: any) => sum + typeFieldCount(f.type), 0);
   }
@@ -40,7 +40,7 @@ export function encodeWitness(abi: CircuitABI | undefined, inputs: Record<string
     let idx = 0;
     for (const key of Object.keys(inputs)) {
       const fields = flattenToFields(inputs[key]);
-      for (const f of fields) witnessEntries.push([idx++, normalizeFieldBytes(f)]);
+      for (const f of fields) {witnessEntries.push([idx++, normalizeFieldBytes(f)]);}
     }
   } else {
     let idx = 0;
@@ -71,7 +71,7 @@ function serializeWitnessStackBincode(entries: Array<[number, Uint8Array]>): Uin
     }
   };
   const bytes = (buf: Uint8Array) => {
-    for (const b of buf) out.push(b);
+    for (const b of buf) {out.push(b);}
   };
 
   // WitnessStack.stack: Vec<StackItem> len = 1
@@ -90,12 +90,12 @@ function serializeWitnessStackBincode(entries: Array<[number, Uint8Array]>): Uin
 }
 
 function flattenToFields(value: any): Uint8Array[] {
-  if (value === null || value === undefined) return [field(0n)];
-  if (typeof value === 'boolean') return [field(value ? 1n : 0n)];
-  if (typeof value === 'number') return [field(BigInt(value))];
-  if (typeof value === 'bigint') return [field(value)];
+  if (value === null || value === undefined) {return [field(0n)];}
+  if (typeof value === 'boolean') {return [field(value ? 1n : 0n)];}
+  if (typeof value === 'number') {return [field(BigInt(value))];}
+  if (typeof value === 'bigint') {return [field(value)];}
   if (typeof value === 'string') {
-    if (value.startsWith('0x') || value.startsWith('0X')) return [field(BigInt(value))];
+    if (value.startsWith('0x') || value.startsWith('0X')) {return [field(BigInt(value))];}
     try {
       return [field(BigInt(value))];
     } catch {
@@ -103,7 +103,7 @@ function flattenToFields(value: any): Uint8Array[] {
     }
   }
   if (value instanceof Uint8Array) {
-    if (value.length <= 32) return [normalizeFieldBytes(value)];
+    if (value.length <= 32) {return [normalizeFieldBytes(value)];}
     const out: Uint8Array[] = [];
     for (let i = 0; i < value.length; i += 31) {
       const chunk = value.slice(i, Math.min(i + 31, value.length));
@@ -111,13 +111,13 @@ function flattenToFields(value: any): Uint8Array[] {
     }
     return out;
   }
-  if (Array.isArray(value)) return value.flatMap(v => flattenToFields(v));
-  if (typeof value === 'object') return Object.values(value).flatMap(v => flattenToFields(v));
+  if (Array.isArray(value)) {return value.flatMap(v => flattenToFields(v));}
+  if (typeof value === 'object') {return Object.values(value).flatMap(v => flattenToFields(v));}
   return [field(0n)];
 }
 
 function normalizeFieldBytes(value: Uint8Array): Uint8Array {
-  if (value.length === 32) return value;
+  if (value.length === 32) {return value;}
   const out = new Uint8Array(32);
   out.set(value.slice(Math.max(0, value.length - 32)), Math.max(0, 32 - value.length));
   return out;

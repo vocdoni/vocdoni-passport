@@ -24,7 +24,7 @@ export interface StoredID {
 export async function getAllIDs(): Promise<StoredID[]> {
   try {
     const data = await EncryptedStorage.getItem(IDS_STORAGE_KEY);
-    if (!data) return [];
+    if (!data) {return [];}
     return JSON.parse(data) as StoredID[];
   } catch (error) {
     console.error('[idStorage] Failed to read IDs:', error);
@@ -71,7 +71,7 @@ export function parsePassportData(
   const dg1 = Buffer.from(dg1Base64, 'base64');
   const mrz = extractMrzFromDG1(dg1);
   const parsed = parseMrz(mrz);
-  
+
   let photo: string | undefined;
   if (dg2Base64) {
     photo = extractPhotoFromDG2(dg2Base64);
@@ -109,7 +109,7 @@ function extractMrzFromDG1(dg1: Uint8Array): string {
 
 function parseMrz(mrz: string) {
   const clean = mrz.replace(/\n/g, '').replace(/ /g, '');
-  
+
   if (clean.length >= 88 && clean[0] === 'P') {
     const names = clean.slice(5, 44).split('<<');
     return {
@@ -123,12 +123,12 @@ function parseMrz(mrz: string) {
       firstName: (names[1] || '').replace(/</g, ' ').trim(),
     };
   }
-  
+
   const line1 = clean.slice(0, 30);
   const line2 = clean.slice(30, 60);
   const line3 = clean.slice(60, 90);
   const names = line3.split('<<');
-  
+
   return {
     issuingCountry: line1.slice(2, 5).replace(/</g, ''),
     documentNumber: line1.slice(5, 14).replace(/</g, ''),
@@ -142,7 +142,7 @@ function parseMrz(mrz: string) {
 }
 
 function formatDate(yymmdd: string): string {
-  if (yymmdd.length !== 6) return yymmdd;
+  if (yymmdd.length !== 6) {return yymmdd;}
   const yy = parseInt(yymmdd.slice(0, 2), 10);
   const mm = yymmdd.slice(2, 4);
   const dd = yymmdd.slice(4, 6);
@@ -173,14 +173,14 @@ function extractPhotoFromDG2(dg2Base64: string): string | undefined {
 
 function findJpegStart(data: Uint8Array): number {
   for (let i = 0; i < data.length - 1; i++) {
-    if (data[i] === 0xff && data[i + 1] === 0xd8) return i;
+    if (data[i] === 0xff && data[i + 1] === 0xd8) {return i;}
   }
   return -1;
 }
 
 function findJpegEnd(data: Uint8Array, start: number): number {
   for (let i = start + 2; i < data.length - 1; i++) {
-    if (data[i] === 0xff && data[i + 1] === 0xd9) return i;
+    if (data[i] === 0xff && data[i + 1] === 0xd9) {return i;}
   }
   return -1;
 }
@@ -195,7 +195,7 @@ function findJP2Start(data: Uint8Array): number {
         break;
       }
     }
-    if (match) return i;
+    if (match) {return i;}
   }
   return -1;
 }

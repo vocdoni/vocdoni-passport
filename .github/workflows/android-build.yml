@@ -1,0 +1,171 @@
+# Android Build Workflow for VocdoniPassport
+#
+# This workflow builds the Android app using Docker containers.
+# The build is fully self-contained and works on any Linux runner.
+#
+# Outputs:
+#   - APK artifact downloadable from the workflow run
+#   - AAB artifact for Play Store (manual trigger only)
+#
+# Copyright (c) 2024 Vocdoni Association
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Android Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build output format"
+        required: true
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - aab
+
+  push:
+    branches:
+      - main
+    paths:
+      - "android/**"
+      - "src/**"
+      - "package.json"
+      - "docker/apk.Dockerfile"
+      - ".github/workflows/android-build.yml"
+
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROVER_REPO_URL: "https://github.com/vocdoni/vocdoni-passport-prover.git"
+  PROVER_REPO_REF: "main"
+  DOCKER_IMAGE: "vocdoni-passport-android"
+
+jobs:
+  # Run tests first (fast feedback)
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run TypeScript check
+        run: npm run typecheck
+
+      - name: Run linter
+        run: npm run lint || true  # Don't fail on lint warnings
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
+  # Build Android APK/AAB
+  build-android:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          df -h
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-android-${{ hashFiles('docker/apk.Dockerfile', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-android-
+
+      - name: Prepare prover source
+        run: |
+          mkdir -p vendor/vocdoni-passport-prover
+
+          git clone --depth 1 --branch ${{ env.PROVER_REPO_REF }} \
+            ${{ env.PROVER_REPO_URL }} \
+            /tmp/vocdoni-passport-prover
+
+          cp /tmp/vocdoni-passport-prover/Cargo.toml vendor/vocdoni-passport-prover/
+          cp /tmp/vocdoni-passport-prover/Cargo.lock vendor/vocdoni-passport-prover/
+          cp -R /tmp/vocdoni-passport-prover/crates vendor/vocdoni-passport-prover/
+
+      - name: Determine build task
+        id: build-task
+        run: |
+          if [ "${{ inputs.build_type }}" = "aab" ]; then
+            echo "task=bundleRelease" >> $GITHUB_OUTPUT
+            echo "artifact_name=app-release.aab" >> $GITHUB_OUTPUT
+            echo "artifact_type=aab" >> $GITHUB_OUTPUT
+          else
+            echo "task=assembleRelease" >> $GITHUB_OUTPUT
+            echo "artifact_name=app-release.apk" >> $GITHUB_OUTPUT
+            echo "artifact_type=apk" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Android app
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/apk.Dockerfile
+          build-args: |
+            GRADLE_TASK=${{ steps.build-task.outputs.task }}
+          tags: ${{ env.DOCKER_IMAGE }}:latest
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Extract build artifacts
+        run: |
+          mkdir -p out
+          CONTAINER_ID=$(docker create ${{ env.DOCKER_IMAGE }}:latest)
+          docker cp "$CONTAINER_ID:/out/." out/
+          docker rm "$CONTAINER_ID"
+          
+          echo "=== Build artifacts ==="
+          ls -lh out/
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Upload APK artifact
+        if: steps.build-task.outputs.artifact_type == 'apk'
+        uses: actions/upload-artifact@v4
+        with:
+          name: VocdoniPassport-Android-APK
+          path: out/*.apk
+          retention-days: 30
+
+      - name: Upload AAB artifact
+        if: steps.build-task.outputs.artifact_type == 'aab'
+        uses: actions/upload-artifact@v4
+        with:
+          name: VocdoniPassport-Android-AAB
+          path: out/*.aab
+          retention-days: 30
+          if-no-files-found: warn

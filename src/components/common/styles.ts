@@ -4,32 +4,32 @@ export const colors = {
   primary: '#2e6cff',
   primaryLight: '#ecf2ff',
   primaryDark: '#214fb6',
-  
+
   background: '#f3f6fb',
   surface: '#ffffff',
   surfaceDark: '#111827',
-  
+
   text: '#0f172a',
   textSecondary: '#51607a',
   textMuted: '#6b7b93',
   textOnDark: '#f8fafc',
   textOnDarkMuted: '#c7d0e2',
-  
+
   success: '#1f9254',
   successLight: '#e8fbef',
   successDark: '#067647',
-  
+
   error: '#d92d20',
   errorLight: '#feefef',
   errorDark: '#b42318',
-  
+
   warning: '#dc6803',
   warningLight: '#fef4e6',
   warningDark: '#b45309',
-  
+
   border: '#e4ebf8',
   borderLight: '#d7e1f1',
-  
+
   cardShadow: '#0b1220',
 };
 

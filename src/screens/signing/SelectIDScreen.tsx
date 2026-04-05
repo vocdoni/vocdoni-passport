@@ -64,7 +64,7 @@ export function SelectIDScreen() {
   };
 
   const handleAddID = () => {
-    rootNavigation.navigate('Main', { 
+    rootNavigation.navigate('Main', {
       screen: 'IDs',
       params: { screen: 'AddIDMrz' } as any,
     });
@@ -79,7 +79,7 @@ export function SelectIDScreen() {
       <View style={commonStyles.safeArea}>
         <ScrollView contentContainerStyle={styles.container}>
           <BackButton onPress={() => navigation.goBack()} />
-          
+
           <View style={styles.emptyContent}>
             <View style={styles.emptyIcon}>
               <Text style={styles.emptyIconText}>🪪</Text>
@@ -100,7 +100,7 @@ export function SelectIDScreen() {
       <View style={commonStyles.safeArea}>
         <ScrollView contentContainerStyle={styles.container}>
           <BackButton onPress={() => navigation.goBack()} />
-          
+
           <View style={styles.emptyContent}>
             <View style={[styles.emptyIcon, styles.errorIcon]}>
               <Text style={styles.emptyIconText}>⚠️</Text>
@@ -109,7 +109,7 @@ export function SelectIDScreen() {
             <Text style={styles.emptySubtitle}>
               None of your IDs meet the requirements for this petition.
             </Text>
-            
+
             {hasRequirements && (
               <View style={styles.requirementsBox}>
                 <Text style={styles.requirementsTitle}>Requirements:</Text>
@@ -153,7 +153,7 @@ export function SelectIDScreen() {
     <View style={commonStyles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>Select ID</Text>
           <Text style={commonStyles.pageSubtitle}>

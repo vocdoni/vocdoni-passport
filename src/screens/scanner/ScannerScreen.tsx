@@ -37,7 +37,7 @@ export function ScannerScreen() {
 
   const parseScannedPayload = useCallback((raw: string): ProofRequestPayload => {
     const text = String(raw || '').trim();
-    if (!text) throw new Error('Empty QR payload');
+    if (!text) {throw new Error('Empty QR payload');}
 
     const tryJson = (s: string): any | null => {
       try { return JSON.parse(s); } catch { return null; }
@@ -55,14 +55,14 @@ export function ScannerScreen() {
       } catch {}
     }
 
-    if (!payload || typeof payload !== 'object') throw new Error('QR does not contain a valid request');
-    if (!payload.aggregateUrl || typeof payload.aggregateUrl !== 'string') throw new Error('QR payload missing aggregateUrl');
+    if (!payload || typeof payload !== 'object') {throw new Error('QR does not contain a valid request');}
+    if (!payload.aggregateUrl || typeof payload.aggregateUrl !== 'string') {throw new Error('QR payload missing aggregateUrl');}
     return payload as ProofRequestPayload;
   }, []);
 
   const resolvePayload = useCallback(async (raw: string): Promise<ProofRequestPayload> => {
     const text = String(raw || '').trim();
-    if (!text) throw new Error('Empty request payload');
+    if (!text) {throw new Error('Empty request payload');}
 
     try {
       return parseScannedPayload(text);
@@ -116,7 +116,7 @@ export function ScannerScreen() {
   }, []);
 
   const handleLoadLink = useCallback(async () => {
-    if (!requestLink.trim()) return;
+    if (!requestLink.trim()) {return;}
 
     setLoadingLink(true);
     try {
@@ -135,7 +135,7 @@ export function ScannerScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <AppHeader />
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -235,16 +235,16 @@ export function ScannerScreen() {
 function getQueryParam(rawUrl: string, key: string): string | null {
   const text = String(rawUrl || '').trim();
   const queryIndex = text.indexOf('?');
-  if (queryIndex < 0) return null;
+  if (queryIndex < 0) {return null;}
   const fragmentIndex = text.indexOf('#', queryIndex);
   const query = text.slice(queryIndex + 1, fragmentIndex >= 0 ? fragmentIndex : undefined);
   for (const part of query.split('&')) {
-    if (!part) continue;
+    if (!part) {continue;}
     const eqIndex = part.indexOf('=');
     const rawKey = eqIndex >= 0 ? part.slice(0, eqIndex) : part;
     const rawValue = eqIndex >= 0 ? part.slice(eqIndex + 1) : '';
     const decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
-    if (decodedKey !== key) continue;
+    if (decodedKey !== key) {continue;}
     return decodeURIComponent(rawValue.replace(/\+/g, ' '));
   }
   return null;

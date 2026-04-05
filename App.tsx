@@ -27,7 +27,7 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator({ needsWalletSetup }: { needsWalletSetup: boolean }) {
   return (
-    <RootStack.Navigator 
+    <RootStack.Navigator
       screenOptions={{ headerShown: false }}
       initialRouteName={needsWalletSetup ? 'WalletSetup' : 'Main'}
     >
@@ -65,7 +65,7 @@ function AppContent() {
 
   // Handle Android back button - navigate back instead of exiting app
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android') {return;}
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (navigationRef.current?.canGoBack()) {

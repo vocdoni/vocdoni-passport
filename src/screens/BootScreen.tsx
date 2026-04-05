@@ -12,7 +12,7 @@ interface BootScreenProps {
 export function BootScreen({ onReady }: BootScreenProps) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [statusText, setStatusText] = useState('Initializing...');
-  
+
   const logoScale = useRef(new Animated.Value(0.8)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
@@ -147,7 +147,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
     let progress = 0;
 
     const updateProgress = (target: number) => {
-      if (cancelled) return;
+      if (cancelled) {return;}
       Animated.timing(progressWidth, {
         toValue: target,
         duration: 300,
@@ -157,11 +157,11 @@ export function BootScreen({ onReady }: BootScreenProps) {
     };
 
     preloadCoreProofAssets((step, detail) => {
-      if (cancelled) return;
+      if (cancelled) {return;}
       progress += 15;
-      if (progress > 90) progress = 90;
+      if (progress > 90) {progress = 90;}
       updateProgress(progress);
-      
+
       if (detail.toLowerCase().includes('manifest')) {
         setStatusText('Loading circuits...');
       } else if (detail.toLowerCase().includes('certificate')) {
@@ -173,11 +173,11 @@ export function BootScreen({ onReady }: BootScreenProps) {
       }
     })
       .then(() => {
-        if (cancelled) return;
+        if (cancelled) {return;}
         setStatus('ready');
         setStatusText('Ready!');
         updateProgress(100);
-        
+
         Animated.spring(checkScale, {
           toValue: 1,
           tension: 50,
@@ -186,7 +186,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
         }).start();
 
         setTimeout(() => {
-          if (cancelled) return;
+          if (cancelled) {return;}
           Animated.parallel([
             Animated.timing(buttonOpacity, {
               toValue: 1,
@@ -203,15 +203,15 @@ export function BootScreen({ onReady }: BootScreenProps) {
         }, 300);
 
         setTimeout(() => {
-          if (!cancelled) onReady();
+          if (!cancelled) {onReady();}
         }, 1200);
       })
       .catch((error: any) => {
-        if (cancelled) return;
+        if (cancelled) {return;}
         setStatus('error');
         setStatusText('Ready to continue');
         updateProgress(100);
-        
+
         Animated.parallel([
           Animated.timing(buttonOpacity, {
             toValue: 1,
@@ -226,7 +226,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
         ]).start();
 
         setTimeout(() => {
-          if (!cancelled) onReady();
+          if (!cancelled) {onReady();}
         }, 1500);
       });
 
@@ -268,7 +268,7 @@ export function BootScreen({ onReady }: BootScreenProps) {
               },
             ]}
           />
-          
+
           <Animated.View
             style={[
               styles.logoCircle,
