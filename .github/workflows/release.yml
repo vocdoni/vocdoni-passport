@@ -79,11 +79,11 @@ jobs:
       - name: Run tests
         run: npm test -- --passWithNoTests
 
-  # Build Android APK
+  # Build Android APK (heavy Docker build — use self-hosted runner with Docker)
   build-android:
     name: Build Android APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+    runs-on: [self-hosted]
+    timeout-minutes: 180
     needs: [prepare, test]
 
     steps:
@@ -92,12 +92,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
 
       - name: Cache Docker layers
         uses: actions/cache@v4

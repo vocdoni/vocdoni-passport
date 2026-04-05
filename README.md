@@ -3,8 +3,15 @@
 Privacy-preserving identity verification using zkPassport and zero-knowledge proofs.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![CI](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ci.yml/badge.svg)](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ci.yml)
 [![Android Build](https://github.com/vocdoni/vocdoni-passport/actions/workflows/android-build.yml/badge.svg)](https://github.com/vocdoni/vocdoni-passport/actions/workflows/android-build.yml)
 [![iOS Build](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ios-build.yml/badge.svg)](https://github.com/vocdoni/vocdoni-passport/actions/workflows/ios-build.yml)
+
+## Continuous integration
+
+- **CI** runs TypeScript checks, ESLint, and Jest on every push (Ubuntu, GitHub-hosted).
+- **Android image build** is Docker-heavy and runs on a **[self-hosted](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners) Linux runner** with Docker. Add a repository runner so `Android Build` and release APK jobs can complete.
+- **iOS build** uses GitHub-hosted `macOS` runners.
 
 ## Overview
 

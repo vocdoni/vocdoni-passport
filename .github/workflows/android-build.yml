@@ -1,7 +1,7 @@
 # Android Build Workflow for VocdoniPassport
 #
-# This workflow builds the Android app using Docker containers.
-# The build is fully self-contained and works on any Linux runner.
+# The Docker image build is heavy; it runs on self-hosted runners.
+# Ensure a Linux self-hosted runner with Docker is registered for this repository.
 #
 # Outputs:
 #   - APK artifact downloadable from the workflow run
@@ -75,8 +75,8 @@ jobs:
   # Build Android APK/AAB
   build-android:
     name: Build Android App
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+    runs-on: [self-hosted]
+    timeout-minutes: 180
     needs: test
 
     steps:
@@ -85,13 +85,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          df -h
 
       - name: Cache Docker layers
         uses: actions/cache@v4
