@@ -170,25 +170,36 @@ jobs:
           pathlib.Path(sys.argv[1]).write_text(normalized)
           PY
 
-          validate_keystore() {
-            local store_type="$1"
-            docker run --rm \
-              -e STOREPASS="$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
-              -e STORETYPE="$store_type" \
-              -e ALIAS="$ANDROID_UPLOAD_KEY_ALIAS" \
-              -v "$RUNNER_TEMP:/work:ro" \
-              eclipse-temurin:21-jdk \
-              sh -lc 'keytool -list -keystore /work/android-upload-keystore.jks -storepass "$STOREPASS" -storetype "$STORETYPE" -alias "$ALIAS" >/dev/null 2>&1'
-          }
+          KEYSTORE_HEADER=$(python3 - <<'PY' "$KEYSTORE_PATH"
+          import pathlib
+          import sys
 
-          if validate_keystore JKS; then
-            echo "ANDROID_UPLOAD_STORE_TYPE=JKS" >> $GITHUB_ENV
-          elif validate_keystore PKCS12; then
-            echo "ANDROID_UPLOAD_STORE_TYPE=PKCS12" >> $GITHUB_ENV
-          else
-            echo "::error::Decoded keystore is not a readable JKS or PKCS12 store, or the alias/password is incorrect"
+          print(pathlib.Path(sys.argv[1]).read_bytes()[:4].hex())
+          PY
+          )
+
+          case "$KEYSTORE_HEADER" in
+            feedfeed)
+              ANDROID_UPLOAD_STORE_TYPE="JKS"
+              ;;
+            *)
+              # Modern keytool defaults to PKCS12, which uses ASN.1/DER rather than the JKS magic header.
+              ANDROID_UPLOAD_STORE_TYPE="PKCS12"
+              ;;
+          esac
+
+          if ! docker run --rm \
+            -e STOREPASS="$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
+            -e STORETYPE="$ANDROID_UPLOAD_STORE_TYPE" \
+            -e ALIAS="$ANDROID_UPLOAD_KEY_ALIAS" \
+            -v "$RUNNER_TEMP:/work:ro" \
+            eclipse-temurin:21-jdk \
+            sh -lc 'keytool -list -keystore /work/android-upload-keystore.jks -storepass "$STOREPASS" -storetype "$STORETYPE" -alias "$ALIAS" >/dev/null 2>&1'; then
+            echo "::error::Decoded keystore is not readable as $ANDROID_UPLOAD_STORE_TYPE, or the alias/password is incorrect"
             exit 1
           fi
+
+          echo "ANDROID_UPLOAD_STORE_TYPE=$ANDROID_UPLOAD_STORE_TYPE" >> $GITHUB_ENV
 
           echo "ANDROID_KEYSTORE_BASE64_PATH=$KEYSTORE_BASE64_PATH" >> $GITHUB_ENV
 
