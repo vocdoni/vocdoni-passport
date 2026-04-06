@@ -97,15 +97,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-release-${{ hashFiles('docker/apk.Dockerfile', 'package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-release-
-            ${{ runner.os }}-buildx-android-
-
       - name: Prepare prover source
         run: |
           mkdir -p vendor/vocdoni-passport-prover
@@ -215,8 +206,6 @@ jobs:
             ANDROID_UPLOAD_STORE_TYPE=${{ env.ANDROID_UPLOAD_STORE_TYPE }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           secret-files: |
             android_keystore_base64=${{ env.ANDROID_KEYSTORE_BASE64_PATH }}
           secrets: |
@@ -236,11 +225,6 @@ jobs:
           mv out/app-release.apk "out/VocdoniPassport-${VERSION}.apk"
           mv out/app-release.aab "out/VocdoniPassport-${VERSION}.aab"
           ls -lh out/
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

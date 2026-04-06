@@ -72,14 +72,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-android-${{ hashFiles('docker/apk.Dockerfile', 'package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-android-
-
       - name: Prepare prover source
         run: |
           mkdir -p vendor/vocdoni-passport-prover
@@ -117,8 +109,6 @@ jobs:
             GRADLE_TASK=${{ steps.build-task.outputs.task }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Extract build artifacts
         run: |
@@ -129,11 +119,6 @@ jobs:
           
           echo "=== Build artifacts ==="
           ls -lh out/
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Upload APK artifact
         if: steps.build-task.outputs.artifact_type == 'apk'
