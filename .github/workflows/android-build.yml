@@ -24,20 +24,6 @@ on:
           - apk
           - aab
 
-  push:
-    branches:
-      - main
-    paths:
-      - "android/**"
-      - "src/**"
-      - "package.json"
-      - "docker/apk.Dockerfile"
-      - ".github/workflows/android-build.yml"
-
-  pull_request:
-    branches:
-      - main
-
 env:
   PROVER_REPO_URL: "https://github.com/vocdoni/vocdoni-passport-prover.git"
   PROVER_REPO_REF: "main"

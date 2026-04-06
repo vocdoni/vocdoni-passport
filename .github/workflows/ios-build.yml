@@ -29,28 +29,6 @@ on:
         default: false
         type: boolean
 
-  push:
-    branches:
-      - main
-    paths:
-      - "ios/**"
-      - "src/**"
-      - "assets/**"
-      - "App.tsx"
-      - "app.json"
-      - "babel.config.js"
-      - "Gemfile"
-      - "index.js"
-      - "metro.config.js"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.json"
-      - ".github/workflows/ios-build.yml"
-
-  pull_request:
-    branches:
-      - main
-
 env:
   RUST_VERSION: "1.89"
   PROVER_REPO_URL: "https://github.com/vocdoni/vocdoni-passport-prover.git"
