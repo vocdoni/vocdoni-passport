@@ -122,14 +122,64 @@ jobs:
       - name: Prepare Android signing materials
         env:
           ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
         run: |
+          set -euo pipefail
+
           if [ -z "$ANDROID_UPLOAD_KEYSTORE_BASE64" ]; then
             echo "::error::ANDROID_UPLOAD_KEYSTORE_BASE64 secret is required for release builds"
             exit 1
           fi
 
+          if [ -z "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" ]; then
+            echo "::error::ANDROID_UPLOAD_KEYSTORE_PASSWORD secret is required for release builds"
+            exit 1
+          fi
+
+          if [ -z "$ANDROID_UPLOAD_KEY_ALIAS" ]; then
+            echo "::error::ANDROID_UPLOAD_KEY_ALIAS secret is required for release builds"
+            exit 1
+          fi
+
           KEYSTORE_PATH="$RUNNER_TEMP/android-upload-keystore.jks"
-          echo "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          python3 - <<'PY' "$KEYSTORE_PATH"
+          import base64
+          import binascii
+          import os
+          import pathlib
+          import sys
+
+          raw = "".join(os.environ["ANDROID_UPLOAD_KEYSTORE_BASE64"].split())
+          try:
+              decoded = base64.b64decode(raw, validate=True)
+          except binascii.Error as exc:
+              print(f"::error::ANDROID_UPLOAD_KEYSTORE_BASE64 is not valid base64: {exc}")
+              raise SystemExit(1)
+
+          pathlib.Path(sys.argv[1]).write_bytes(decoded)
+          PY
+
+          validate_keystore() {
+            local store_type="$1"
+            docker run --rm \
+              -e STOREPASS="$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
+              -e STORETYPE="$store_type" \
+              -e ALIAS="$ANDROID_UPLOAD_KEY_ALIAS" \
+              -v "$RUNNER_TEMP:/work:ro" \
+              eclipse-temurin:21-jdk \
+              sh -lc 'keytool -list -keystore /work/android-upload-keystore.jks -storepass "$STOREPASS" -storetype "$STORETYPE" -alias "$ALIAS" >/dev/null 2>&1'
+          }
+
+          if validate_keystore JKS; then
+            echo "ANDROID_UPLOAD_STORE_TYPE=JKS" >> $GITHUB_ENV
+          elif validate_keystore PKCS12; then
+            echo "ANDROID_UPLOAD_STORE_TYPE=PKCS12" >> $GITHUB_ENV
+          else
+            echo "::error::Decoded keystore is not a readable JKS or PKCS12 store, or the alias/password is incorrect"
+            exit 1
+          fi
+
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> $GITHUB_ENV
 
       - name: Build Android release artifacts
@@ -141,6 +191,7 @@ jobs:
             GRADLE_TASKS=assembleRelease bundleRelease
             ANDROID_VERSION_NAME=${{ needs.prepare.outputs.android_version_name }}
             ANDROID_VERSION_CODE=${{ github.run_number }}
+            ANDROID_UPLOAD_STORE_TYPE=${{ env.ANDROID_UPLOAD_STORE_TYPE }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
           cache-from: type=local,src=/tmp/.buildx-cache

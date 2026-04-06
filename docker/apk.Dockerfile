@@ -36,6 +36,7 @@ ARG GRADLE_EXTRA_ARGS=
 ARG RUST_VERSION=1.89
 ARG ANDROID_VERSION_NAME=1.0
 ARG ANDROID_VERSION_CODE=1
+ARG ANDROID_UPLOAD_STORE_TYPE=JKS
 
 # =============================================================================
 # System Dependencies
@@ -249,7 +250,7 @@ RUN --mount=type=secret,id=android_keystore,required=false \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
     if [ -f /run/secrets/android_keystore ]; then \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_FILE=/run/secrets/android_keystore; \
-        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_TYPE=JKS; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_TYPE="${ANDROID_UPLOAD_STORE_TYPE}"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_PASSWORD="$(cat /run/secrets/android_keystore_password)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_ALIAS="$(cat /run/secrets/android_key_alias)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_PASSWORD="$(cat /run/secrets/android_key_password)"; \
