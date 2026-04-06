@@ -16,6 +16,7 @@ def readBuildSetting = { String name ->
 def androidVersionCodeOverride = readBuildSetting("ANDROID_VERSION_CODE")
 def androidVersionNameOverride = readBuildSetting("ANDROID_VERSION_NAME")
 def androidUploadStoreFile = readBuildSetting("ANDROID_UPLOAD_STORE_FILE")
+def androidUploadStoreType = readBuildSetting("ANDROID_UPLOAD_STORE_TYPE") ?: "JKS"
 def androidUploadStorePassword = readBuildSetting("ANDROID_UPLOAD_STORE_PASSWORD")
 def androidUploadKeyAlias = readBuildSetting("ANDROID_UPLOAD_KEY_ALIAS")
 def androidUploadKeyPassword = readBuildSetting("ANDROID_UPLOAD_KEY_PASSWORD")
@@ -135,6 +136,7 @@ android {
         if (hasAndroidReleaseSigning) {
             release {
                 storeFile file(androidUploadStoreFile)
+                storeType androidUploadStoreType
                 storePassword androidUploadStorePassword
                 keyAlias androidUploadKeyAlias
                 keyPassword androidUploadKeyPassword

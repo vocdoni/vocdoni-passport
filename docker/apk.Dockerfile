@@ -249,6 +249,7 @@ RUN --mount=type=secret,id=android_keystore,required=false \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
     if [ -f /run/secrets/android_keystore ]; then \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_FILE=/run/secrets/android_keystore; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_TYPE=JKS; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_PASSWORD="$(cat /run/secrets/android_keystore_password)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_ALIAS="$(cat /run/secrets/android_key_alias)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_PASSWORD="$(cat /run/secrets/android_key_password)"; \
