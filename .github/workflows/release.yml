@@ -143,6 +143,7 @@ jobs:
           fi
 
           KEYSTORE_PATH="$RUNNER_TEMP/android-upload-keystore.jks"
+          KEYSTORE_BASE64_PATH="$RUNNER_TEMP/android-upload-keystore.base64"
           python3 - <<'PY' "$KEYSTORE_PATH"
           import base64
           import binascii
@@ -158,6 +159,15 @@ jobs:
               raise SystemExit(1)
 
           pathlib.Path(sys.argv[1]).write_bytes(decoded)
+          PY
+
+          python3 - <<'PY' "$KEYSTORE_BASE64_PATH"
+          import os
+          import pathlib
+          import sys
+
+          normalized = "".join(os.environ["ANDROID_UPLOAD_KEYSTORE_BASE64"].split())
+          pathlib.Path(sys.argv[1]).write_text(normalized)
           PY
 
           validate_keystore() {
@@ -180,6 +190,8 @@ jobs:
             exit 1
           fi
 
+          echo "ANDROID_KEYSTORE_BASE64_PATH=$KEYSTORE_BASE64_PATH" >> $GITHUB_ENV
+
       - name: Build Android release artifacts
         uses: docker/build-push-action@v5
         with:
@@ -194,8 +206,9 @@ jobs:
           load: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          secret-files: |
+            android_keystore_base64=${{ env.ANDROID_KEYSTORE_BASE64_PATH }}
           secrets: |
-            android_keystore_base64=${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
             android_keystore_password=${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
             android_key_alias=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
             android_key_password=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
@@ -234,7 +247,7 @@ jobs:
 
       - name: Cleanup Android signing materials
         if: always()
-        run: rm -f "$RUNNER_TEMP/android-upload-keystore.jks"
+        run: rm -f "$RUNNER_TEMP/android-upload-keystore.jks" "$RUNNER_TEMP/android-upload-keystore.base64"
 
   # Build iOS app (development build for simulator)
   build-ios:
