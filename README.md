@@ -39,6 +39,8 @@ Vocdoni Passport is a mobile application that enables users to prove attributes 
 
 Download the latest APK from the [Releases](https://github.com/vocdoni/vocdoni-passport/releases) page.
 
+Tagged GitHub releases also attach a signed Android `AAB` for Play Console upload.
+
 ### Build from Source
 
 #### Prerequisites
@@ -144,6 +146,15 @@ make apk PROVER_REPO_LOCAL_DIR=/path/to/vocdoni-passport-prover
 
 For automated builds, configure these repository secrets:
 
+### Android Release Builds
+
+| Secret | Description |
+|--------|-------------|
+| `ANDROID_UPLOAD_KEYSTORE_BASE64` | Base64-encoded Play Store upload keystore |
+| `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Upload keystore password |
+| `ANDROID_UPLOAD_KEY_ALIAS` | Upload key alias |
+| `ANDROID_UPLOAD_KEY_PASSWORD` | Upload key password |
+
 ### iOS Release Builds
 
 | Secret | Description |
@@ -156,6 +167,15 @@ For automated builds, configure these repository secrets:
 | `APP_STORE_CONNECT_API_KEY_ID` | App Store Connect API Key ID |
 | `APP_STORE_CONNECT_API_ISSUER_ID` | App Store Connect Issuer ID |
 | `APP_STORE_CONNECT_API_KEY_BASE64` | Base64-encoded .p8 API key |
+
+## Release Process
+
+See [docs/releasing.md](docs/releasing.md) for:
+
+- Android upload key generation
+- GitHub Actions secret setup
+- tag-based releases
+- TestFlight uploads for iPhone testing
 
 ## Contributing
 

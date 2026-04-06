@@ -31,8 +31,11 @@ FROM reactnativecommunity/react-native-android:latest
 # Build arguments
 ARG AZTEC_PACKAGES_REF=a4f7c39e15e7835c1f5f491168afa4aaac286894
 ARG GRADLE_TASK=assembleRelease
+ARG GRADLE_TASKS=
 ARG GRADLE_EXTRA_ARGS=
 ARG RUST_VERSION=1.89
+ARG ANDROID_VERSION_NAME=1.0
+ARG ANDROID_VERSION_CODE=1
 
 # =============================================================================
 # System Dependencies
@@ -235,7 +238,22 @@ RUN echo "=== Native library sizes ===" && \
 
 # Build the app
 WORKDIR /app/VocdoniPassport/android
-RUN ./gradlew ${GRADLE_TASK} --no-daemon \
+RUN --mount=type=secret,id=android_keystore,required=false \
+    --mount=type=secret,id=android_keystore_password,required=false \
+    --mount=type=secret,id=android_key_alias,required=false \
+    --mount=type=secret,id=android_key_password,required=false \
+    set -eux; \
+    TASKS="${GRADLE_TASK}"; \
+    if [ -n "${GRADLE_TASKS}" ]; then TASKS="${GRADLE_TASKS}"; fi; \
+    export ORG_GRADLE_PROJECT_ANDROID_VERSION_NAME="${ANDROID_VERSION_NAME}"; \
+    export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
+    if [ -f /run/secrets/android_keystore ]; then \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_FILE=/run/secrets/android_keystore; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_PASSWORD="$(cat /run/secrets/android_keystore_password)"; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_ALIAS="$(cat /run/secrets/android_key_alias)"; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_PASSWORD="$(cat /run/secrets/android_key_password)"; \
+    fi; \
+    ./gradlew ${TASKS} --no-daemon \
         -Dorg.gradle.jvmargs="-Xmx4g" \
         ${GRADLE_EXTRA_ARGS}
 

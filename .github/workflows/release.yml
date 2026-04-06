@@ -1,6 +1,7 @@
 # Release Workflow
 #
-# This workflow creates a GitHub release with downloadable APK and IPA assets.
+# This workflow creates a GitHub release with Android release artifacts and an
+# iOS simulator build.
 # Triggered manually or when a version tag is pushed.
 #
 # Usage:
@@ -43,16 +44,19 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      android_version_name: ${{ steps.version.outputs.android_version_name }}
       
     steps:
       - name: Determine version
         id: version
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ inputs.version }}"
           else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF#refs/tags/}"
           fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "android_version_name=${VERSION#v}" >> $GITHUB_OUTPUT
 
   # Run tests first
   test:
@@ -79,9 +83,9 @@ jobs:
       - name: Run tests
         run: npm test -- --passWithNoTests
 
-  # Build Android APK (heavy Docker build — use self-hosted runner with Docker)
+  # Build Android release artifacts (heavy Docker build — use self-hosted runner with Docker)
   build-android:
-    name: Build Android APK
+    name: Build Android Release Artifacts
     runs-on: [self-hosted, linux, X64]
     timeout-minutes: 180
     needs: [prepare, test]
@@ -115,18 +119,40 @@ jobs:
           cp "$PROVER_TMP_DIR/Cargo.lock" vendor/vocdoni-passport-prover/
           cp -R "$PROVER_TMP_DIR/crates" vendor/vocdoni-passport-prover/
 
-      - name: Build Android APK
+      - name: Prepare Android signing materials
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_UPLOAD_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_UPLOAD_KEYSTORE_BASE64 secret is required for release builds"
+            exit 1
+          fi
+
+          KEYSTORE_PATH="$RUNNER_TEMP/android-upload-keystore.jks"
+          echo "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> $GITHUB_ENV
+
+      - name: Build Android release artifacts
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/apk.Dockerfile
-          build-args: GRADLE_TASK=assembleRelease
+          build-args: |
+            GRADLE_TASKS=assembleRelease bundleRelease
+            ANDROID_VERSION_NAME=${{ needs.prepare.outputs.android_version_name }}
+            ANDROID_VERSION_CODE=${{ github.run_number }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          secret-files: |
+            android_keystore=${{ env.ANDROID_KEYSTORE_PATH }}
+          secrets: |
+            android_keystore_password=${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+            android_key_alias=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+            android_key_password=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
 
-      - name: Extract APK
+      - name: Extract Android release artifacts
         run: |
           mkdir -p out
           CONTAINER_ID=$(docker create ${{ env.DOCKER_IMAGE }}:latest)
@@ -136,6 +162,7 @@ jobs:
           # Rename with version
           VERSION="${{ needs.prepare.outputs.version }}"
           mv out/app-release.apk "out/VocdoniPassport-${VERSION}.apk"
+          mv out/app-release.aab "out/VocdoniPassport-${VERSION}.aab"
           ls -lh out/
 
       - name: Move cache
@@ -149,6 +176,17 @@ jobs:
           name: android-apk
           path: out/*.apk
           retention-days: 30
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: out/*.aab
+          retention-days: 30
+
+      - name: Cleanup Android signing materials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-upload-keystore.jks"
 
   # Build iOS app (development build for simulator)
   build-ios:
@@ -289,6 +327,12 @@ jobs:
           name: android-apk
           path: artifacts/
 
+      - name: Download Android AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: android-aab
+          path: artifacts/
+
       - name: Download iOS build
         uses: actions/download-artifact@v4
         with:
@@ -308,19 +352,25 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/*.apk
+            artifacts/*.aab
             artifacts/*.zip
           body: |
             ## Downloads
             
             | Platform | File | Description |
             |----------|------|-------------|
-            | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.apk` | Install directly on Android devices |
+            | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.apk` | Signed Android package for direct installation |
+            | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.aab` | Signed Android App Bundle for Play Console upload |
             | iOS | `VocdoniPassport-iOS-Simulator-${{ needs.prepare.outputs.version }}.zip` | Simulator build (drag to Simulator) |
             
             ### Android Installation
             1. Download the APK file
             2. Enable "Install from unknown sources" in Settings
             3. Open the APK file to install
+
+            ### Android Play Store
+            1. Upload the AAB file to the Google Play Console
+            2. Use the same upload key configured in GitHub Actions secrets
             
             ### iOS Simulator
             1. Download and unzip the file

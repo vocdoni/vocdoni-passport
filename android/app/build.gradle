@@ -6,6 +6,25 @@ apply plugin: "com.facebook.react"
 // Local dev: omit flag (default) → debug skips bundling and uses the dev server.
 def bundleInDebug = project.findProperty("bundleInDebug") == "true"
 
+def readBuildSetting = { String name ->
+    if (project.hasProperty(name)) {
+        return project.property(name)
+    }
+    return System.getenv(name)
+}
+
+def androidVersionCodeOverride = readBuildSetting("ANDROID_VERSION_CODE")
+def androidVersionNameOverride = readBuildSetting("ANDROID_VERSION_NAME")
+def androidUploadStoreFile = readBuildSetting("ANDROID_UPLOAD_STORE_FILE")
+def androidUploadStorePassword = readBuildSetting("ANDROID_UPLOAD_STORE_PASSWORD")
+def androidUploadKeyAlias = readBuildSetting("ANDROID_UPLOAD_KEY_ALIAS")
+def androidUploadKeyPassword = readBuildSetting("ANDROID_UPLOAD_KEY_PASSWORD")
+def hasAndroidReleaseSigning =
+    androidUploadStoreFile &&
+    androidUploadStorePassword &&
+    androidUploadKeyAlias &&
+    androidUploadKeyPassword
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -90,8 +109,8 @@ android {
         applicationId "com.vocdonipassport"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode androidVersionCodeOverride ? androidVersionCodeOverride.toInteger() : 1
+        versionName androidVersionNameOverride ?: "1.0"
 
         // arm64: physical devices; x86_64: Android Emulator on typical desktops
         ndk {
@@ -113,6 +132,14 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasAndroidReleaseSigning) {
+            release {
+                storeFile file(androidUploadStoreFile)
+                storePassword androidUploadStorePassword
+                keyAlias androidUploadKeyAlias
+                keyPassword androidUploadKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
@@ -121,9 +148,9 @@ android {
             buildConfigField "boolean", "USE_DEV_SERVER", bundleInDebug ? "false" : "true"
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Use the Play upload key when present; otherwise keep preview builds
+            // working with the debug keystore.
+            signingConfig hasAndroidReleaseSigning ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             shrinkResources enableProguardInReleaseBuilds  // Remove unused resources
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
