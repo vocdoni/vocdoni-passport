@@ -36,6 +36,7 @@ ARG GRADLE_EXTRA_ARGS=
 ARG RUST_VERSION=1.89
 ARG ANDROID_VERSION_NAME=1.0
 ARG ANDROID_VERSION_CODE=1
+ARG ANDROID_UPLOAD_STORE_TYPE=JKS
 
 # =============================================================================
 # System Dependencies
@@ -238,7 +239,7 @@ RUN echo "=== Native library sizes ===" && \
 
 # Build the app
 WORKDIR /app/VocdoniPassport/android
-RUN --mount=type=secret,id=android_keystore,required=false \
+RUN --mount=type=secret,id=android_keystore_base64,required=false \
     --mount=type=secret,id=android_keystore_password,required=false \
     --mount=type=secret,id=android_key_alias,required=false \
     --mount=type=secret,id=android_key_password,required=false \
@@ -247,9 +248,16 @@ RUN --mount=type=secret,id=android_keystore,required=false \
     if [ -n "${GRADLE_TASKS}" ]; then TASKS="${GRADLE_TASKS}"; fi; \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_NAME="${ANDROID_VERSION_NAME}"; \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
-    if [ -f /run/secrets/android_keystore ]; then \
-        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_FILE=/run/secrets/android_keystore; \
-        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_TYPE=JKS; \
+    if [ -f /run/secrets/android_keystore_base64 ]; then \
+        KEYSTORE_PATH=/tmp/android-upload-keystore; \
+        tr -d '\r\n\t ' < /run/secrets/android_keystore_base64 | base64 -d > "${KEYSTORE_PATH}"; \
+        keytool -list \
+            -keystore "${KEYSTORE_PATH}" \
+            -storepass "$(cat /run/secrets/android_keystore_password)" \
+            -storetype "${ANDROID_UPLOAD_STORE_TYPE}" \
+            -alias "$(cat /run/secrets/android_key_alias)" >/dev/null; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_FILE="${KEYSTORE_PATH}"; \
+        export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_TYPE="${ANDROID_UPLOAD_STORE_TYPE}"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_STORE_PASSWORD="$(cat /run/secrets/android_keystore_password)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_ALIAS="$(cat /run/secrets/android_key_alias)"; \
         export ORG_GRADLE_PROJECT_ANDROID_UPLOAD_KEY_PASSWORD="$(cat /run/secrets/android_key_password)"; \
