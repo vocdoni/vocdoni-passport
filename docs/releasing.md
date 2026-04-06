@@ -24,6 +24,18 @@ ANDROID_UPLOAD_KEY_ALIAS='upload' \
 ./scripts/generate-android-upload-keystore.sh
 ```
 
+The script uses local `keytool` when available. If no JDK is installed, it falls back to Docker automatically.
+
+To force Docker even when `keytool` exists:
+
+```bash
+ANDROID_UPLOAD_USE_DOCKER=always \
+ANDROID_UPLOAD_KEYSTORE_PASSWORD='CHANGE_ME' \
+ANDROID_UPLOAD_KEY_PASSWORD='CHANGE_ME' \
+ANDROID_UPLOAD_KEY_ALIAS='upload' \
+./scripts/generate-android-upload-keystore.sh
+```
+
 Add these repository secrets in GitHub Actions:
 
 - `ANDROID_UPLOAD_KEYSTORE_BASE64`
@@ -31,14 +43,7 @@ Add these repository secrets in GitHub Actions:
 - `ANDROID_UPLOAD_KEY_ALIAS`
 - `ANDROID_UPLOAD_KEY_PASSWORD`
 
-Encode the keystore for `ANDROID_UPLOAD_KEYSTORE_BASE64` with:
-
-```bash
-python3 - <<'PY' "${XDG_STATE_HOME:-$HOME/.local/state}/vocdoni-passport/signing/android-upload-keystore.jks"
-import base64, pathlib, sys
-print(base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode())
-PY
-```
+The script prints the full `ANDROID_UPLOAD_KEYSTORE_BASE64` value for direct copy into GitHub Actions secrets.
 
 The release workflow uses the upload key at build time and does not commit it or store it in the repository.
 
