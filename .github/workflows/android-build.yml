@@ -136,3 +136,11 @@ jobs:
           path: out/*.aab
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: VocdoniPassport-Android-Native-Debug-Symbols
+          path: out/*native-debug-symbols*.zip
+          retention-days: 30
+          if-no-files-found: warn

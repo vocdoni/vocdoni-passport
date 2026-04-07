@@ -39,7 +39,7 @@ Vocdoni Passport is a mobile application that enables users to prove attributes 
 
 Download the latest APK from the [Releases](https://github.com/vocdoni/vocdoni-passport/releases) page.
 
-Tagged GitHub releases also attach a signed Android `AAB` for Play Console upload.
+Tagged GitHub releases also attach a signed Android `AAB` for Play Console upload and `native-debug-symbols.zip` for native crash symbolication.
 
 ### Build from Source
 
@@ -55,6 +55,9 @@ Tagged GitHub releases also attach a signed Android `AAB` for Play Console uploa
 ```bash
 # Build release APK using Docker (works on any OS)
 make apk
+
+# Build Play Console native debug symbols ZIP
+make native-debug-symbols
 
 # Install on connected device
 make apk-install

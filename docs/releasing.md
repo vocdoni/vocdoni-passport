@@ -2,7 +2,7 @@
 
 The repository has two distribution paths:
 
-- Android GitHub release assets: signed `APK` and signed `AAB`
+- Android GitHub release assets: signed `APK`, signed `AAB`, and `native-debug-symbols.zip`
 - iOS device testing: signed `IPA` through the `iOS Build` workflow and optional TestFlight upload
 
 ## Android upload key
@@ -87,7 +87,30 @@ The GitHub release attaches:
 
 - signed Android `APK`
 - signed Android `AAB`
+- Android `native-debug-symbols.zip`
 - iOS simulator `.zip`
+
+## Android native debug symbols
+
+Google Play can ask for a ZIP of native debug symbols for the `.so` binaries inside the app. The Android release build now generates the standard Gradle output:
+
+```text
+android/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+```
+
+For local Docker builds, use:
+
+```bash
+make native-debug-symbols
+```
+
+That writes:
+
+```text
+out/native-debug-symbols.zip
+```
+
+The tagged `Release` workflow also publishes this ZIP as a GitHub release asset so it can be uploaded directly in Play Console when requested.
 
 ## iPhone testing
 

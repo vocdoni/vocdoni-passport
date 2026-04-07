@@ -224,6 +224,9 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           mv out/app-release.apk "out/VocdoniPassport-${VERSION}.apk"
           mv out/app-release.aab "out/VocdoniPassport-${VERSION}.aab"
+          if [ -f out/native-debug-symbols.zip ]; then
+            mv out/native-debug-symbols.zip "out/VocdoniPassport-${VERSION}-native-debug-symbols.zip"
+          fi
           ls -lh out/
 
       - name: Upload APK artifact
@@ -239,6 +242,14 @@ jobs:
           name: android-aab
           path: out/*.aab
           retention-days: 30
+
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-native-debug-symbols
+          path: out/*native-debug-symbols*.zip
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Cleanup Android signing materials
         if: always()
@@ -395,6 +406,12 @@ jobs:
           name: ios-simulator
           path: artifacts/
 
+      - name: Download Android native debug symbols
+        uses: actions/download-artifact@v4
+        with:
+          name: android-native-debug-symbols
+          path: artifacts/
+
       - name: List artifacts
         run: ls -lh artifacts/
 
@@ -417,6 +434,7 @@ jobs:
             |----------|------|-------------|
             | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.apk` | Signed Android package for direct installation |
             | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}.aab` | Signed Android App Bundle for Play Console upload |
+            | Android | `VocdoniPassport-${{ needs.prepare.outputs.version }}-native-debug-symbols.zip` | Native debug symbols for Play Console native crash symbolication |
             | iOS | `VocdoniPassport-iOS-Simulator-${{ needs.prepare.outputs.version }}.zip` | Simulator build (drag to Simulator) |
             
             ### Android Installation

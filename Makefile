@@ -30,12 +30,13 @@ VENDOR_PROVER_DIR := vendor/vocdoni-passport-prover
 # Output paths
 APK_PATH := $(OUT_DIR)/app-release.apk
 AAB_PATH := $(OUT_DIR)/app-release.aab
+NATIVE_DEBUG_SYMBOLS_PATH := $(OUT_DIR)/native-debug-symbols.zip
 
 # Docker image name
 DOCKER_IMAGE ?= vocdoni-passport-android
 
-.PHONY: help prepare prepare-prover-source apk aab apk-install apk-reset \
-        apk-clean-install fixture-pull ios-info clean
+.PHONY: help prepare prepare-prover-source apk aab native-debug-symbols \
+        apk-install apk-reset apk-clean-install fixture-pull ios-info clean
 
 # Default target
 help:
@@ -46,6 +47,7 @@ help:
 		'Android (Docker-based, works on any OS):' \
 		'  make apk               Build release APK' \
 		'  make aab               Build App Bundle (for Play Store)' \
+		'  make native-debug-symbols  Build Play Console native debug symbols ZIP' \
 		'  make apk-install       Install APK on connected device' \
 		'  make apk-reset         Clear app data on device' \
 		'  make apk-clean-install Build, reset, and install' \
@@ -139,10 +141,12 @@ apk: prepare-prover-source
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
 	$(DOCKER) create --name apk-extract $(DOCKER_IMAGE)
 	$(DOCKER) cp apk-extract:/out/app-release.apk "$(APK_PATH)"
+	$(DOCKER) cp apk-extract:/out/native-debug-symbols.zip "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || true
 	$(DOCKER) rm -f apk-extract
 	@echo ""
 	@echo "APK ready: $(APK_PATH)"
 	@ls -lh "$(APK_PATH)"
+	@ls -lh "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || echo "Warning: native debug symbols ZIP not found"
 
 # Build Android App Bundle
 aab: prepare-prover-source
@@ -155,10 +159,28 @@ aab: prepare-prover-source
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
 	$(DOCKER) create --name apk-extract $(DOCKER_IMAGE)
 	$(DOCKER) cp apk-extract:/out/app-release.aab "$(AAB_PATH)" 2>/dev/null || true
+	$(DOCKER) cp apk-extract:/out/native-debug-symbols.zip "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || true
 	$(DOCKER) rm -f apk-extract
 	@echo ""
 	@echo "AAB ready: $(AAB_PATH)"
 	@ls -lh "$(AAB_PATH)" 2>/dev/null || echo "Warning: AAB not found"
+	@ls -lh "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || echo "Warning: native debug symbols ZIP not found"
+
+# Build Play Console native debug symbols ZIP
+native-debug-symbols: prepare-prover-source
+	@echo "Building Android native debug symbols ZIP..."
+	$(DOCKER) build \
+		-f docker/apk.Dockerfile \
+		--build-arg GRADLE_TASK=bundleRelease \
+		-t $(DOCKER_IMAGE) \
+		.
+	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
+	$(DOCKER) create --name apk-extract $(DOCKER_IMAGE)
+	$(DOCKER) cp apk-extract:/out/native-debug-symbols.zip "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || true
+	$(DOCKER) rm -f apk-extract
+	@echo ""
+	@echo "Native debug symbols ZIP ready: $(NATIVE_DEBUG_SYMBOLS_PATH)"
+	@ls -lh "$(NATIVE_DEBUG_SYMBOLS_PATH)" 2>/dev/null || { echo "Error: native debug symbols ZIP not found"; exit 1; }
 
 # Install APK on connected device
 apk-install:

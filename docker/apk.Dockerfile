@@ -36,6 +36,7 @@ ARG GRADLE_EXTRA_ARGS=
 ARG RUST_VERSION=1.89
 ARG ANDROID_VERSION_NAME=1.0
 ARG ANDROID_VERSION_CODE=1
+ARG ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL=SYMBOL_TABLE
 ARG ANDROID_UPLOAD_STORE_TYPE=JKS
 
 # =============================================================================
@@ -226,12 +227,6 @@ RUN mkdir -p android/app/src/main/jniLibs/arm64-v8a && \
     cp /tmp/vocdoni-passport-prover/target/x86_64-linux-android/release/libacvm_witness_jni.so \
         android/app/src/main/jniLibs/x86_64/libacvm_witness_jni.so
 
-# Strip debug symbols to reduce APK size
-RUN $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
-        android/app/src/main/jniLibs/arm64-v8a/*.so && \
-    $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
-        android/app/src/main/jniLibs/x86_64/*.so
-
 # Show library sizes
 RUN echo "=== Native library sizes ===" && \
     ls -lh android/app/src/main/jniLibs/arm64-v8a/ && \
@@ -248,6 +243,7 @@ RUN --mount=type=secret,id=android_keystore_base64,required=false \
     if [ -n "${GRADLE_TASKS}" ]; then TASKS="${GRADLE_TASKS}"; fi; \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_NAME="${ANDROID_VERSION_NAME}"; \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
+    export ORG_GRADLE_PROJECT_ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL="${ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL}"; \
     if [ -f /run/secrets/android_keystore_base64 ]; then \
         KEYSTORE_PATH=/tmp/android-upload-keystore; \
         tr -d '\r\n\t ' < /run/secrets/android_keystore_base64 | base64 -d > "${KEYSTORE_PATH}"; \
@@ -272,7 +268,8 @@ RUN --mount=type=secret,id=android_keystore_base64,required=false \
 
 RUN mkdir -p /out && \
     find app/build/outputs -name "*.apk" -exec cp {} /out/ \; && \
-    find app/build/outputs -name "*.aab" -exec cp {} /out/ \; || true
+    find app/build/outputs -name "*.aab" -exec cp {} /out/ \; && \
+    find app/build/outputs/native-debug-symbols -name "*.zip" -exec cp {} /out/native-debug-symbols.zip \; || true
 
 # List outputs
 RUN echo "=== Build outputs ===" && ls -lh /out/

@@ -15,6 +15,7 @@ def readBuildSetting = { String name ->
 
 def androidVersionCodeOverride = readBuildSetting("ANDROID_VERSION_CODE")
 def androidVersionNameOverride = readBuildSetting("ANDROID_VERSION_NAME")
+def androidNativeDebugSymbolLevel = readBuildSetting("ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL") ?: "SYMBOL_TABLE"
 def androidUploadStoreFile = readBuildSetting("ANDROID_UPLOAD_STORE_FILE")
 def androidUploadStoreType = readBuildSetting("ANDROID_UPLOAD_STORE_TYPE") ?: "JKS"
 def androidUploadStorePassword = readBuildSetting("ANDROID_UPLOAD_STORE_PASSWORD")
@@ -175,10 +176,10 @@ android {
         }
     }
     
-    // Strip native libraries of debug symbols
+    // Emit a Play Console-compatible native-debug-symbols.zip in release builds.
     buildTypes.release {
         ndk {
-            debugSymbolLevel 'NONE'
+            debugSymbolLevel androidNativeDebugSymbolLevel
         }
     }
 }
