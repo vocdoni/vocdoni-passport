@@ -267,8 +267,8 @@ RUN --mount=type=secret,id=android_keystore_base64,required=false \
 # =============================================================================
 
 RUN mkdir -p /out && \
-    find app/build/outputs -name "*.apk" -exec cp {} /out/ \; && \
-    find app/build/outputs -name "*.aab" -exec cp {} /out/ \; && \
+    find app/build/outputs -name "*.apk" -exec cp {} /out/ \; || true && \
+    find app/build/outputs -name "*.aab" -exec cp {} /out/ \; || true && \
     find app/build/outputs/native-debug-symbols -name "*.zip" -exec cp {} /out/native-debug-symbols.zip \; || true
 
 # List outputs

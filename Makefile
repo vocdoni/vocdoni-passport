@@ -171,7 +171,7 @@ native-debug-symbols: prepare-prover-source
 	@echo "Building Android native debug symbols ZIP..."
 	$(DOCKER) build \
 		-f docker/apk.Dockerfile \
-		--build-arg GRADLE_TASK=bundleRelease \
+		--build-arg GRADLE_TASK=assembleRelease \
 		-t $(DOCKER_IMAGE) \
 		.
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
