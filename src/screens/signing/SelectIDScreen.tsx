@@ -66,7 +66,7 @@ export function SelectIDScreen() {
   const handleAddID = () => {
     rootNavigation.navigate('Main', {
       screen: 'IDs',
-      params: { screen: 'AddIDMrz' } as any,
+      params: { screen: 'AddIDMrz' },
     });
   };
 
@@ -251,13 +251,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   errorIcon: {
-    backgroundColor: '#fff3e6',
+    backgroundColor: colors.warningLight,
   },
   emptyIconText: {
     fontSize: 40,
@@ -297,12 +297,12 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   requirementsBoxSmall: {
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     borderRadius: borderRadius.md,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#d0e0ff',
+    borderColor: colors.infoBorder,
   },
   requirementsTitleSmall: {
     fontSize: 12,

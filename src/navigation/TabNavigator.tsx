@@ -116,10 +116,14 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   );
 }
 
+function renderCustomTabBar(props: BottomTabBarProps) {
+  return <CustomTabBar {...props} />;
+}
+
 export function TabNavigator() {
   return (
     <Tab.Navigator
-      tabBar={CustomTabBar}
+      tabBar={renderCustomTabBar}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="IDs" component={IDsStackNavigator} />

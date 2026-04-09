@@ -62,6 +62,7 @@ export function WalletRestoreScreen() {
   }, [phrase, validateMnemonic, restoreFromPhrase, navigation]);
 
   const wordCount = phrase.trim() ? phrase.trim().split(/\s+/).length : 0;
+  const hasValidWordCount = wordCount === 12 || wordCount === 24;
 
   return (
     <View style={commonStyles.safeArea}>
@@ -71,7 +72,7 @@ export function WalletRestoreScreen() {
         <View style={commonStyles.pageHeader}>
           <Text style={commonStyles.pageTitle}>Restore Your Identity</Text>
           <Text style={commonStyles.pageSubtitle}>
-            Enter your 12-word recovery phrase to restore your digital identity
+            Enter your 12- or 24-word recovery phrase to restore your digital identity
           </Text>
         </View>
 
@@ -93,7 +94,7 @@ export function WalletRestoreScreen() {
 
           <View style={styles.inputFooter}>
             <Text style={styles.wordCount}>
-              {wordCount} / 12 words
+              {wordCount} words
             </Text>
             <TouchableOpacity onPress={handlePaste} style={styles.pasteButton}>
               <Text style={styles.pasteButtonText}>Paste</Text>
@@ -111,8 +112,8 @@ export function WalletRestoreScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.infoIcon}>💡</Text>
           <Text style={styles.infoText}>
-            Your recovery phrase is 12 words that were shown when you first
-            created your identity. Enter them in the exact order, separated by spaces.
+            Your recovery phrase is usually 12 or 24 words. Enter the words in the exact
+            order, separated by single spaces.
           </Text>
         </View>
 
@@ -121,7 +122,7 @@ export function WalletRestoreScreen() {
             label={isRestoring ? 'Restoring...' : 'Restore Identity'}
             onPress={handleRestore}
             variant="primary"
-            disabled={isRestoring || wordCount < 12}
+            disabled={isRestoring || !hasValidWordCount}
           />
         </View>
       </ScrollView>
@@ -176,12 +177,12 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     flexDirection: 'row',
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorLight,
     padding: 14,
     borderRadius: borderRadius.lg,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: colors.errorBorder,
   },
   errorIcon: {
     fontSize: 16,

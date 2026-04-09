@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,10 @@ function WordPill({ index, word }: { index: number; word: string }) {
 export function MnemonicDisplay({ words, onReveal, revealed = false }: MnemonicDisplayProps) {
   const [isRevealed, setIsRevealed] = useState(revealed);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setIsRevealed(revealed);
+  }, [revealed]);
 
   const displayWords = isRevealed && words ? words : REDACTED_WORDS;
 

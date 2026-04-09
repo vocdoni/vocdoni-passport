@@ -29,7 +29,7 @@ export function IDsScreen() {
   const { ids, loading, refresh, hasIDs } = useIDs();
   const [activeIndex, setActiveIndex] = useState(0);
   const [blurred, setBlurred] = useState(false);
-  const [showDevMenu, setShowDevMenu] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useFocusEffect(
@@ -53,12 +53,12 @@ export function IDsScreen() {
   }, [navigation]);
 
   const handleExploreID = useCallback(() => {
-    setShowDevMenu(false);
+    setShowOptionsMenu(false);
     navigation.navigate('ExploreIDMrz');
   }, [navigation]);
 
   const handleIdentity = useCallback(() => {
-    setShowDevMenu(false);
+    setShowOptionsMenu(false);
     navigation.getParent()?.navigate('Wallet');
   }, [navigation]);
 
@@ -67,8 +67,8 @@ export function IDsScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <AppHeader />
         <View style={styles.emptyHeaderRow}>
-          <TouchableOpacity style={styles.debugButton} onPress={() => setShowDevMenu(true)}>
-            <Text style={styles.debugButtonText}>🛠️</Text>
+          <TouchableOpacity style={styles.optionsButton} onPress={() => setShowOptionsMenu(true)}>
+            <Text style={styles.optionsButtonText}>⋯</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -88,40 +88,52 @@ export function IDsScreen() {
         </ScrollView>
 
         <Modal
-          visible={showDevMenu}
+          visible={showOptionsMenu}
           transparent
           animationType="fade"
-          onRequestClose={() => setShowDevMenu(false)}
+          onRequestClose={() => setShowOptionsMenu(false)}
         >
           <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
-            onPress={() => setShowDevMenu(false)}
+            onPress={() => setShowOptionsMenu(false)}
           >
-            <View style={styles.devMenuContainer}>
-              <View style={styles.devMenuHeader}>
-                <Text style={styles.devMenuIcon}>🛠️</Text>
-                <Text style={styles.devMenuTitle}>Tools</Text>
+            <View style={styles.menuContainer}>
+              <View style={styles.menuHeader}>
+                <Text style={styles.menuIcon}>⋯</Text>
+                <Text style={styles.menuTitle}>Options</Text>
               </View>
 
-              <TouchableOpacity style={styles.devMenuItem} onPress={handleExploreID}>
-                <Text style={styles.devMenuItemIcon}>🔬</Text>
-                <View style={styles.devMenuItemContent}>
-                  <Text style={styles.devMenuItemTitle}>Explore ID</Text>
-                  <Text style={styles.devMenuItemDesc}>
-                    Scan and view all raw data from an ID chip
+              <TouchableOpacity style={styles.menuItem} onPress={handleIdentity}>
+                <Text style={styles.menuItemIcon}>🔐</Text>
+                <View style={styles.menuItemContent}>
+                  <Text style={styles.menuItemTitle}>Digital Identity</Text>
+                  <Text style={styles.menuItemDesc}>
+                    View your wallet address and recovery phrase
                   </Text>
                 </View>
-                <Text style={styles.devMenuItemArrow}>→</Text>
+                <Text style={styles.menuItemArrow}>→</Text>
               </TouchableOpacity>
 
-              <View style={styles.devMenuDivider} />
+              {__DEV__ && (
+                <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
+                  <Text style={styles.menuItemIcon}>🔬</Text>
+                  <View style={styles.menuItemContent}>
+                    <Text style={styles.menuItemTitle}>Explore ID</Text>
+                    <Text style={styles.menuItemDesc}>
+                      Scan and view all raw data from an ID chip
+                    </Text>
+                  </View>
+                  <Text style={styles.menuItemArrow}>→</Text>
+                </TouchableOpacity>
+              )}
 
+              <View style={styles.menuDivider} />
               <TouchableOpacity
-                style={styles.devMenuClose}
-                onPress={() => setShowDevMenu(false)}
+                style={styles.menuClose}
+                onPress={() => setShowOptionsMenu(false)}
               >
-                <Text style={styles.devMenuCloseText}>Close</Text>
+                <Text style={styles.menuCloseText}>Close</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -147,8 +159,8 @@ export function IDsScreen() {
             </Text>
           </View>
           <View style={styles.titleButtons}>
-            <TouchableOpacity style={styles.debugButton} onPress={() => setShowDevMenu(true)}>
-              <Text style={styles.debugButtonText}>🛠️</Text>
+            <TouchableOpacity style={styles.optionsButton} onPress={() => setShowOptionsMenu(true)}>
+              <Text style={styles.optionsButtonText}>⋯</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addButton} onPress={handleAddID}>
               <Text style={styles.addButtonText}>+ Add</Text>
@@ -221,51 +233,52 @@ export function IDsScreen() {
       </ScrollView>
 
       <Modal
-        visible={showDevMenu}
+        visible={showOptionsMenu}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowDevMenu(false)}
+        onRequestClose={() => setShowOptionsMenu(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowDevMenu(false)}
+          onPress={() => setShowOptionsMenu(false)}
         >
-          <View style={styles.devMenuContainer}>
-            <View style={styles.devMenuHeader}>
-              <Text style={styles.devMenuIcon}>🛠️</Text>
-              <Text style={styles.devMenuTitle}>Tools</Text>
+          <View style={styles.menuContainer}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuIcon}>⋯</Text>
+              <Text style={styles.menuTitle}>Options</Text>
             </View>
 
-            <TouchableOpacity style={styles.devMenuItem} onPress={handleExploreID}>
-              <Text style={styles.devMenuItemIcon}>🔬</Text>
-              <View style={styles.devMenuItemContent}>
-                <Text style={styles.devMenuItemTitle}>Explore ID</Text>
-                <Text style={styles.devMenuItemDesc}>
-                  Scan and view all raw data from an ID chip
-                </Text>
-              </View>
-              <Text style={styles.devMenuItemArrow}>→</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.devMenuItem} onPress={handleIdentity}>
-              <Text style={styles.devMenuItemIcon}>🔐</Text>
-              <View style={styles.devMenuItemContent}>
-                <Text style={styles.devMenuItemTitle}>Digital Identity</Text>
-                <Text style={styles.devMenuItemDesc}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleIdentity}>
+              <Text style={styles.menuItemIcon}>🔐</Text>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Digital Identity</Text>
+                <Text style={styles.menuItemDesc}>
                   View your wallet address and recovery phrase
                 </Text>
               </View>
-              <Text style={styles.devMenuItemArrow}>→</Text>
+              <Text style={styles.menuItemArrow}>→</Text>
             </TouchableOpacity>
 
-            <View style={styles.devMenuDivider} />
+            {__DEV__ && (
+              <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
+                <Text style={styles.menuItemIcon}>🔬</Text>
+                <View style={styles.menuItemContent}>
+                  <Text style={styles.menuItemTitle}>Explore ID</Text>
+                  <Text style={styles.menuItemDesc}>
+                    Scan and view all raw data from an ID chip
+                  </Text>
+                </View>
+                <Text style={styles.menuItemArrow}>→</Text>
+              </TouchableOpacity>
+            )}
 
+            <View style={styles.menuDivider} />
             <TouchableOpacity
-              style={styles.devMenuClose}
-              onPress={() => setShowDevMenu(false)}
+              style={styles.menuClose}
+              onPress={() => setShowOptionsMenu(false)}
             >
-              <Text style={styles.devMenuCloseText}>Close</Text>
+              <Text style={styles.menuCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -305,7 +318,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  debugButton: {
+  optionsButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -315,8 +328,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  debugButtonText: {
-    fontSize: 18,
+  optionsButtonText: {
+    fontSize: 22,
+    lineHeight: 22,
+    color: colors.text,
+    marginTop: -2,
+    fontWeight: '600',
   },
   addButton: {
     backgroundColor: colors.primary,
@@ -384,10 +401,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     padding: 14,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#d4e2ff',
+    borderColor: colors.infoBorder,
     marginBottom: 16,
   },
   infoIcon: {
@@ -439,7 +456,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -467,68 +484,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  devMenuContainer: {
-    backgroundColor: '#fff',
+  menuContainer: {
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     width: '100%',
     maxWidth: 340,
     overflow: 'hidden',
   },
-  devMenuHeader: {
+  menuHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.infoLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  devMenuIcon: {
-    fontSize: 24,
+  menuIcon: {
+    fontSize: 28,
     marginRight: 12,
+    color: colors.text,
   },
-  devMenuTitle: {
+  menuTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
   },
-  devMenuItem: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
   },
-  devMenuItemIcon: {
+  menuItemIcon: {
     fontSize: 28,
     marginRight: 14,
   },
-  devMenuItemContent: {
+  menuItemContent: {
     flex: 1,
   },
-  devMenuItemTitle: {
+  menuItemTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 2,
   },
-  devMenuItemDesc: {
+  menuItemDesc: {
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  devMenuItemArrow: {
+  menuItemArrow: {
     fontSize: 18,
     color: colors.textMuted,
     marginLeft: 8,
   },
-  devMenuDivider: {
+  menuDivider: {
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: 16,
   },
-  devMenuClose: {
+  menuClose: {
     padding: 16,
     alignItems: 'center',
   },
-  devMenuCloseText: {
+  menuCloseText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary,

@@ -4,6 +4,8 @@ export const colors = {
   primary: '#2e6cff',
   primaryLight: '#ecf2ff',
   primaryDark: '#214fb6',
+  infoLight: '#f0f5ff',
+  infoBorder: '#d4e2ff',
 
   background: '#f3f6fb',
   surface: '#ffffff',
@@ -18,14 +20,17 @@ export const colors = {
   success: '#1f9254',
   successLight: '#e8fbef',
   successDark: '#067647',
+  successBorder: '#b7ebcb',
 
   error: '#d92d20',
   errorLight: '#feefef',
   errorDark: '#b42318',
+  errorBorder: '#fecaca',
 
   warning: '#dc6803',
   warningLight: '#fef4e6',
   warningDark: '#b45309',
+  warningBorder: '#fed7aa',
 
   border: '#e4ebf8',
   borderLight: '#d7e1f1',

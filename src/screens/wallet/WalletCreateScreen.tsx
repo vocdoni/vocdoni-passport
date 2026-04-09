@@ -53,8 +53,8 @@ export function WalletCreateScreen() {
         'Save Your Recovery Phrase',
         'Please reveal and save your recovery phrase before continuing. This is the only way to recover your identity if you lose access to this device.',
         [
-          { text: 'Reveal Phrase', onPress: () => {} },
-          { text: 'Skip Anyway', style: 'destructive', onPress: () => navigation.navigate('WalletSetupComplete') },
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Reveal Phrase', onPress: () => setHasRevealed(true) },
         ]
       );
       return;
@@ -87,6 +87,7 @@ export function WalletCreateScreen() {
         <MnemonicDisplay
           words={words}
           onReveal={handleReveal}
+          revealed={hasRevealed}
         />
 
         <View style={styles.warningBox}>
@@ -113,7 +114,7 @@ export function WalletCreateScreen() {
 
         <View style={styles.buttons}>
           <Button
-            label={hasRevealed ? "I've Saved My Phrase" : 'Continue'}
+            label={hasRevealed ? "I've Saved My Phrase" : 'Reveal Phrase to Continue'}
             onPress={handleContinue}
             variant="primary"
           />
@@ -139,12 +140,12 @@ const styles = StyleSheet.create({
   },
   warningBox: {
     flexDirection: 'row',
-    backgroundColor: '#fff7ed',
+    backgroundColor: colors.warningLight,
     padding: 14,
     borderRadius: borderRadius.lg,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#fed7aa',
+    borderColor: colors.warningBorder,
   },
   warningIcon: {
     fontSize: 20,
@@ -156,13 +157,13 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#c2410c',
+    color: colors.warningDark,
     marginBottom: 8,
   },
   warningText: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#c2410c',
+    color: colors.warningDark,
   },
   addressBox: {
     backgroundColor: colors.surface,

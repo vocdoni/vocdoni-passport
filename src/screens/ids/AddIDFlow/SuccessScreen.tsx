@@ -4,7 +4,7 @@ import { useNavigation, useRoute, CommonActions } from '@react-navigation/native
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button } from '../../../components/common';
+import { Button, FlowStepIndicator } from '../../../components/common';
 import { colors, borderRadius } from '../../../components/common/styles';
 import { getIDById, type StoredID } from '../../../storage/idStorage';
 import type { IDsStackParamList } from '../../../navigation/types';
@@ -158,19 +158,13 @@ export function AddIDSuccessScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.stepIndicator, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-        <View style={[styles.step, styles.stepCompleted]}>
-          <Text style={styles.stepCheck}>✓</Text>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-        <View style={[styles.step, styles.stepCompleted]}>
-          <Text style={styles.stepCheck}>✓</Text>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-        <View style={[styles.step, styles.stepCompleted]}>
-          <Text style={styles.stepCheck}>✓</Text>
-        </View>
-      </View>
+      <FlowStepIndicator
+        steps={['MRZ', 'NFC', 'Done']}
+        activeStep={3}
+        completedSteps={3}
+        showLabels={false}
+        containerStyle={[styles.stepFooter, { paddingBottom: Math.max(insets.bottom, 20) }]}
+      />
     </View>
   );
 }
@@ -272,12 +266,12 @@ const styles = StyleSheet.create({
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#d4e2ff',
+    borderColor: colors.infoBorder,
     width: '100%',
   },
   infoIcon: {
@@ -301,38 +295,10 @@ const styles = StyleSheet.create({
   buttons: {
     width: '100%',
   },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  stepFooter: {
     paddingVertical: 16,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  step: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCompleted: {
-    backgroundColor: colors.success,
-  },
-  stepCheck: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  stepLine: {
-    width: 32,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: 6,
-  },
-  stepLineActive: {
-    backgroundColor: colors.success,
   },
 });

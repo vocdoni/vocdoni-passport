@@ -3,7 +3,7 @@ import 'react-native-get-random-values';
 import 'text-encoding-polyfill';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { StatusBar, View, StyleSheet, Platform, BackHandler } from 'react-native';
+import { StatusBar, View, StyleSheet, BackHandler, Platform } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0,
   },
   loading: {
     flex: 1,

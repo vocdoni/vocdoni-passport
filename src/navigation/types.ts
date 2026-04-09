@@ -4,9 +4,9 @@ import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigat
 import type { ProofRequestPayload } from '../services/ServerClient';
 
 export type TabParamList = {
-  IDs: undefined;
+  IDs: NavigatorScreenParams<IDsStackParamList> | undefined;
   Scanner: undefined;
-  History: undefined;
+  History: NavigatorScreenParams<HistoryStackParamList> | undefined;
   Wallet: undefined;
 };
 

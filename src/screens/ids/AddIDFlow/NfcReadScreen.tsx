@@ -13,7 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, Button } from '../../../components/common';
+import { BackButton, Button, FlowStepIndicator } from '../../../components/common';
 import { Card } from '../../../components/common/Card';
 import { colors, commonStyles, borderRadius } from '../../../components/common/styles';
 import { useIDs } from '../../../hooks/useIDs';
@@ -51,6 +51,7 @@ export function NfcReadScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const ringAnim = useRef(new Animated.Value(0.8)).current;
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { documentNumber, dateOfBirth, dateOfExpiry } = route.params;
 
@@ -87,6 +88,7 @@ export function NfcReadScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'android') {return;}
+    if (!PassportReader) {return;}
 
     const eventEmitter = new NativeEventEmitter(PassportReader);
     const subscription = eventEmitter.addListener('NfcProgress', (event: NfcProgress) => {
@@ -102,6 +104,16 @@ export function NfcReadScreen() {
     return () => {
       subscription.remove();
     };
+  }, []);
+
+  const cancelCurrentScan = useCallback(async () => {
+    if (typeof PassportReader?.cancelCurrentScan !== 'function') {
+      return;
+    }
+
+    try {
+      await Promise.resolve(PassportReader.cancelCurrentScan());
+    } catch {}
   }, []);
 
   const startScan = useCallback(async () => {
@@ -154,7 +166,14 @@ export function NfcReadScreen() {
 
   useEffect(() => {
     startScan();
-  }, [startScan]);
+    return () => {
+      scanAttemptRef.current += 1;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      cancelCurrentScan();
+    };
+  }, [cancelCurrentScan, startScan]);
 
   const retryScan = useCallback(async () => {
     scanAttemptRef.current += 1;
@@ -163,14 +182,13 @@ export function NfcReadScreen() {
     setStatus('Restarting NFC reader...');
     setProgress(0);
 
-    try {
-      if (typeof PassportReader?.cancelCurrentScan === 'function') {
-        await PassportReader.cancelCurrentScan();
-      }
-    } catch {}
+    await cancelCurrentScan();
 
-    setTimeout(() => startScan(), 300);
-  }, [startScan]);
+    retryTimeoutRef.current = setTimeout(() => {
+      retryTimeoutRef.current = null;
+      startScan();
+    }, 300);
+  }, [cancelCurrentScan, startScan]);
 
   const openNfcSettings = useCallback(() => {
     if (Platform.OS === 'android') {
@@ -199,24 +217,11 @@ export function NfcReadScreen() {
           </Text>
         </View>
 
-        <View style={styles.stepIndicator}>
-          <View style={[styles.step, styles.stepCompleted]}>
-            <Text style={styles.stepCheck}>✓</Text>
-          </View>
-          <View style={[styles.stepLine, styles.stepLineActive]} />
-          <View style={[styles.step, styles.stepActive]}>
-            <Text style={styles.stepNumber}>2</Text>
-          </View>
-          <View style={styles.stepLine} />
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>3</Text>
-          </View>
-        </View>
-        <View style={styles.stepLabels}>
-          <Text style={styles.stepLabel}>MRZ</Text>
-          <Text style={[styles.stepLabel, styles.stepLabelActive]}>NFC</Text>
-          <Text style={styles.stepLabel}>Done</Text>
-        </View>
+        <FlowStepIndicator
+          steps={['MRZ', 'NFC', 'Done']}
+          activeStep={2}
+          completedSteps={1}
+        />
 
         <Card>
           <View style={styles.nfcAnimation}>
@@ -254,6 +259,7 @@ export function NfcReadScreen() {
             <Button label="Cancel" onPress={() => {
               scanAttemptRef.current += 1;
               setScanning(false);
+              cancelCurrentScan();
               navigation.goBack();
             }} variant="subtle" />
           )}
@@ -323,60 +329,6 @@ export function NfcReadScreen() {
 }
 
 const styles = StyleSheet.create({
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  step: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepActive: {
-    backgroundColor: colors.primary,
-  },
-  stepCompleted: {
-    backgroundColor: colors.success,
-  },
-  stepNumber: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  stepCheck: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: 8,
-  },
-  stepLineActive: {
-    backgroundColor: colors.success,
-  },
-  stepLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  stepLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  stepLabelActive: {
-    color: colors.primary,
-  },
   mrzRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -416,7 +368,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.infoLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, Alert, NativeModules } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, Button } from '../../../components/common';
+import { BackButton, Button, FlowStepIndicator } from '../../../components/common';
 import { Card } from '../../../components/common/Card';
 import { colors, commonStyles, borderRadius } from '../../../components/common/styles';
 import type { IDsStackParamList } from '../../../navigation/types';
@@ -87,24 +87,10 @@ export function MrzScanScreen() {
           </Text>
         </View>
 
-        <View style={styles.stepIndicator}>
-          <View style={[styles.step, styles.stepActive]}>
-            <Text style={styles.stepNumber}>1</Text>
-          </View>
-          <View style={styles.stepLine} />
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>2</Text>
-          </View>
-          <View style={styles.stepLine} />
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>3</Text>
-          </View>
-        </View>
-        <View style={styles.stepLabels}>
-          <Text style={[styles.stepLabel, styles.stepLabelActive]}>MRZ</Text>
-          <Text style={styles.stepLabel}>NFC</Text>
-          <Text style={styles.stepLabel}>Done</Text>
-        </View>
+        <FlowStepIndicator
+          steps={['MRZ', 'NFC', 'Done']}
+          activeStep={1}
+        />
 
         {!showManual && (
           <Card title="Camera Scan">
@@ -195,49 +181,6 @@ export function MrzScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  step: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepActive: {
-    backgroundColor: colors.primary,
-  },
-  stepNumber: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: 8,
-  },
-  stepLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  stepLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  stepLabelActive: {
-    color: colors.primary,
-  },
   body: {
     fontSize: 15,
     lineHeight: 22,

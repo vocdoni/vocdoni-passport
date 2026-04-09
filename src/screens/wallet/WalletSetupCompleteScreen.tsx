@@ -6,23 +6,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components/common';
 import { colors, commonStyles, borderRadius } from '../../components/common/styles';
 import { useWallet } from '../../contexts/WalletContext';
-import type { WalletStackParamList } from '../../navigation/types';
+import type { RootStackParamList } from '../../navigation/types';
 
 const APP_LOGO = require('../../../assets/logo.png');
 
-type NavigationProp = NativeStackNavigationProp<WalletStackParamList, 'WalletSetupComplete'>;
+type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function WalletSetupCompleteScreen() {
-  const navigation = useNavigation<NavigationProp>();
+  const rootNavigation = useNavigation<RootNavigationProp>();
   const { address } = useWallet();
   const insets = useSafeAreaInsets();
 
   const handleContinue = () => {
-    // Reset navigation to main app
-    navigation.dispatch(
+    rootNavigation.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [{ name: 'Main' as any }],
+        routes: [{ name: 'Main' }],
       })
     );
   };

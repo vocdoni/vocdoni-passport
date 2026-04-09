@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -19,14 +19,19 @@ export function ServerCheckScreen() {
 
   const [status, setStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [errorMessage, setErrorMessage] = useState('');
+  const navigationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkServer = useCallback(async () => {
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+      navigationTimeoutRef.current = null;
+    }
     setStatus('checking');
     setErrorMessage('');
     try {
       await pingServerHealth(request.aggregateUrl);
       setStatus('ok');
-      setTimeout(() => {
+      navigationTimeoutRef.current = setTimeout(() => {
         navigation.replace('PetitionDetails', { request });
       }, 500);
     } catch (error: any) {
@@ -37,9 +42,18 @@ export function ServerCheckScreen() {
 
   useEffect(() => {
     checkServer();
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
   }, [checkServer]);
 
   const handleCancel = () => {
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+      navigationTimeoutRef.current = null;
+    }
     navigation.getParent()?.goBack();
   };
 
