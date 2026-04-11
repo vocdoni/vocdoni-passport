@@ -38,6 +38,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = VocdoniPassport/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = VocdoniPassport/main.m; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = VocdoniPassport/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5F3A5DBF7E104C66B3A8A6D1 /* VocdoniPassport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = VocdoniPassport.entitlements; path = VocdoniPassport/VocdoniPassport.entitlements; sourceTree = "<group>"; };
 		19F6CBCC0A4E27FBF8BF4A61 /* libPods-VocdoniPassport-VocdoniPassportTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VocdoniPassport-VocdoniPassportTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B4392A12AC88292D35C810B /* Pods-VocdoniPassport.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VocdoniPassport.debug.xcconfig"; path = "Target Support Files/Pods-VocdoniPassport/Pods-VocdoniPassport.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-VocdoniPassport.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VocdoniPassport.release.xcconfig"; path = "Target Support Files/Pods-VocdoniPassport/Pods-VocdoniPassport.release.xcconfig"; sourceTree = "<group>"; };
@@ -101,6 +102,7 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				5F3A5DBF7E104C66B3A8A6D1 /* VocdoniPassport.entitlements */,
 			);
 			name = VocdoniPassport;
 			sourceTree = "<group>";
@@ -498,6 +500,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = VocdoniPassport/VocdoniPassport.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = VocdoniPassport/Info.plist;
@@ -531,6 +534,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = VocdoniPassport/VocdoniPassport.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = VocdoniPassport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;

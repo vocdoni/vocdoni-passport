@@ -18,9 +18,8 @@ import { Button, AppHeader } from '../../components/common';
 import { Card } from '../../components/common/Card';
 import { Spinner } from '../../components/common/Spinner';
 import { colors, borderRadius } from '../../components/common/styles';
-import { fetchProofRequestPayload, type ProofRequestPayload } from '../../services/ServerClient';
 import type { RootStackParamList } from '../../navigation/types';
-import { Buffer } from 'buffer';
+import { resolveProofRequestPayload } from '../../utils/requestLinks';
 
 const { ServerQrScanner } = NativeModules;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -35,57 +34,6 @@ export function ScannerScreen() {
   const [requestLink, setRequestLink] = useState('');
   const [loadingLink, setLoadingLink] = useState(false);
 
-  const parseScannedPayload = useCallback((raw: string): ProofRequestPayload => {
-    const text = String(raw || '').trim();
-    if (!text) {throw new Error('Empty QR payload');}
-
-    const tryJson = (s: string): any | null => {
-      try { return JSON.parse(s); } catch { return null; }
-    };
-
-    let payload: any = tryJson(text);
-    if (!payload) {
-      try {
-        const b64 = getQueryParam(text, 'payload') || getQueryParam(text, 'request') || getQueryParam(text, 'c');
-        if (b64) {
-          const normalized = b64.replace(/-/g, '+').replace(/_/g, '/');
-          const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
-          payload = tryJson(Buffer.from(padded, 'base64').toString('utf8'));
-        }
-      } catch {}
-    }
-
-    if (!payload || typeof payload !== 'object') {throw new Error('QR does not contain a valid request');}
-    if (!payload.aggregateUrl || typeof payload.aggregateUrl !== 'string') {throw new Error('QR payload missing aggregateUrl');}
-    return payload as ProofRequestPayload;
-  }, []);
-
-  const resolvePayload = useCallback(async (raw: string): Promise<ProofRequestPayload> => {
-    const text = String(raw || '').trim();
-    if (!text) {throw new Error('Empty request payload');}
-
-    try {
-      return parseScannedPayload(text);
-    } catch {}
-
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(text);
-    } catch {
-      throw new Error('Request is neither valid JSON nor a valid URL');
-    }
-
-    const embeddedPayload = getQueryParam(parsedUrl.toString(), 'payload') ||
-      getQueryParam(parsedUrl.toString(), 'request') ||
-      getQueryParam(parsedUrl.toString(), 'c');
-
-    if (embeddedPayload) {
-      return parseScannedPayload(text);
-    }
-
-    return fetchProofRequestPayload(parsedUrl.toString());
-  }, [parseScannedPayload]);
-
   const handleScanQR = useCallback(async () => {
     if (!ServerQrScanner) {
       Alert.alert('Unavailable', 'QR scanner is not available on this device.');
@@ -95,7 +43,7 @@ export function ScannerScreen() {
     setScanning(true);
     try {
       const result = await ServerQrScanner.scan();
-      const payload = await resolvePayload(result?.payload || '');
+      const payload = await resolveProofRequestPayload(result?.payload || '');
       navigation.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
     } catch (error: any) {
       if (!error?.message?.includes('cancelled')) {
@@ -104,7 +52,7 @@ export function ScannerScreen() {
     } finally {
       setScanning(false);
     }
-  }, [navigation, resolvePayload]);
+  }, [navigation]);
 
   const handlePasteLink = useCallback(async () => {
     try {
@@ -120,7 +68,7 @@ export function ScannerScreen() {
 
     setLoadingLink(true);
     try {
-      const payload = await resolvePayload(requestLink);
+      const payload = await resolveProofRequestPayload(requestLink);
       setRequestLink('');
       setShowLinkInput(false);
       navigation.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
@@ -129,7 +77,7 @@ export function ScannerScreen() {
     } finally {
       setLoadingLink(false);
     }
-  }, [navigation, requestLink, resolvePayload]);
+  }, [navigation, requestLink]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -230,24 +178,6 @@ export function ScannerScreen() {
       </ScrollView>
     </View>
   );
-}
-
-function getQueryParam(rawUrl: string, key: string): string | null {
-  const text = String(rawUrl || '').trim();
-  const queryIndex = text.indexOf('?');
-  if (queryIndex < 0) {return null;}
-  const fragmentIndex = text.indexOf('#', queryIndex);
-  const query = text.slice(queryIndex + 1, fragmentIndex >= 0 ? fragmentIndex : undefined);
-  for (const part of query.split('&')) {
-    if (!part) {continue;}
-    const eqIndex = part.indexOf('=');
-    const rawKey = eqIndex >= 0 ? part.slice(0, eqIndex) : part;
-    const rawValue = eqIndex >= 0 ? part.slice(eqIndex + 1) : '';
-    const decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
-    if (decodedKey !== key) {continue;}
-    return decodeURIComponent(rawValue.replace(/\+/g, ' '));
-  }
-  return null;
 }
 
 const styles = StyleSheet.create({

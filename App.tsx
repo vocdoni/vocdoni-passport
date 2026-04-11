@@ -3,7 +3,7 @@ import 'react-native-get-random-values';
 import 'text-encoding-polyfill';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { StatusBar, View, StyleSheet, BackHandler, Platform } from 'react-native';
+import { StatusBar, View, StyleSheet, BackHandler, Platform, Alert, Linking } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +18,7 @@ import { useAuth } from './src/hooks/useAuth';
 import { WalletProvider, useWallet } from './src/contexts/WalletContext';
 import { colors } from './src/components/common/styles';
 import type { RootStackParamList } from './src/navigation/types';
+import { resolveProofRequestPayload } from './src/utils/requestLinks';
 
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = Buffer as any;
@@ -47,9 +48,12 @@ function RootNavigator({ needsWalletSetup }: { needsWalletSetup: boolean }) {
 
 function AppContent() {
   const [bootReady, setBootReady] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const { status, biometricsAvailable, authenticate, refreshAuthState } = useAuth();
   const { status: walletStatus } = useWallet();
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const handledUrlRef = useRef<string | null>(null);
+  const isProcessingUrlRef = useRef(false);
 
   useEffect(() => {
     if (bootReady && status === 'locked') {
@@ -62,6 +66,62 @@ function AppContent() {
       refreshAuthState();
     }
   }, [bootReady, refreshAuthState]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (mounted && url) {
+          setPendingUrl(url);
+        }
+      })
+      .catch(() => {});
+
+    const subscription = Linking.addEventListener('url', (event) => {
+      setPendingUrl(event.url);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!bootReady || !pendingUrl || isProcessingUrlRef.current) {
+      return;
+    }
+
+    if (status === 'checking' || status === 'locked' || walletStatus === 'checking' || walletStatus === 'no_wallet') {
+      return;
+    }
+
+    const normalizedUrl = pendingUrl.trim();
+    if (!normalizedUrl) {
+      setPendingUrl(null);
+      return;
+    }
+
+    if (handledUrlRef.current === normalizedUrl) {
+      setPendingUrl(null);
+      return;
+    }
+
+    isProcessingUrlRef.current = true;
+    resolveProofRequestPayload(normalizedUrl)
+      .then((payload) => {
+        handledUrlRef.current = normalizedUrl;
+        navigationRef.current?.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
+      })
+      .catch((error: any) => {
+        Alert.alert('Invalid Link', error?.message || 'Could not open the request link.');
+      })
+      .finally(() => {
+        isProcessingUrlRef.current = false;
+        setPendingUrl((current) => current === normalizedUrl ? null : current);
+      });
+  }, [bootReady, pendingUrl, status, walletStatus]);
 
   // Handle Android back button - navigate back instead of exiting app
   useEffect(() => {
