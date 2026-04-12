@@ -66,6 +66,50 @@ export function parseProofRequestPayload(raw: string): ProofRequestPayload {
   return payload as ProofRequestPayload;
 }
 
+function joinUrl(base: string, path: string): string {
+  return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+}
+
+function decodeSignedPassportLink(encoded: string): { serverHost: string; petitionId: string } {
+  const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const decoded = Buffer.from(padded, 'base64').toString('utf8');
+  const separatorIndex = decoded.indexOf('|');
+  if (separatorIndex <= 0 || separatorIndex === decoded.length - 1) {
+    throw new Error('Passport link signature is invalid');
+  }
+
+  const serverHost = decoded.slice(0, separatorIndex).trim();
+  const petitionId = decoded.slice(separatorIndex + 1).trim();
+  if (!serverHost || !petitionId) {
+    throw new Error('Passport link signature is missing host or petition ID');
+  }
+
+  return { serverHost, petitionId };
+}
+
+function tryResolveVocdoniPassportLink(parsedUrl: URL): string | null {
+  const pathname = parsedUrl.pathname.replace(/\/+$/, '');
+  if (pathname !== '/passport') {
+    return null;
+  }
+
+  const sign = (parsedUrl.searchParams.get('sign') || '').trim();
+  if (!sign) {
+    throw new Error('Passport link is missing sign payload');
+  }
+  const { serverHost, petitionId } = decodeSignedPassportLink(sign);
+
+  let upstreamBase: URL;
+  try {
+    upstreamBase = new URL(`https://${serverHost}`);
+  } catch {
+    throw new Error('Passport link server host is invalid');
+  }
+
+  return joinUrl(upstreamBase.toString(), `/petition/${petitionId}`);
+}
+
 export async function resolveProofRequestPayload(raw: string): Promise<ProofRequestPayload> {
   const text = String(raw || '').trim();
   if (!text) {
@@ -90,6 +134,11 @@ export async function resolveProofRequestPayload(raw: string): Promise<ProofRequ
 
   if (embeddedPayload) {
     return parseProofRequestPayload(text);
+  }
+
+  const vocdoniPassportRequestUrl = tryResolveVocdoniPassportLink(parsedUrl);
+  if (vocdoniPassportRequestUrl) {
+    return fetchProofRequestPayload(vocdoniPassportRequestUrl);
   }
 
   return fetchProofRequestPayload(parsedUrl.toString());
