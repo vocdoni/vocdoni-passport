@@ -19,6 +19,7 @@ export type WalletStackParamList = {
 
 export type IDsStackParamList = {
   IDsList: undefined;
+  About: undefined;
   IDDetails: { id: string };
   AddIDMrz: undefined;
   AddIDNfc: { documentNumber: string; dateOfBirth: string; dateOfExpiry: string };

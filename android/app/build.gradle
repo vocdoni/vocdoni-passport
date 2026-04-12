@@ -26,6 +26,8 @@ def hasAndroidReleaseSigning =
     androidUploadStorePassword &&
     androidUploadKeyAlias &&
     androidUploadKeyPassword
+def projectRootDir = rootProject.projectDir.parentFile
+def buildInfoScript = new File(projectRootDir, "scripts/write-build-info.js")
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -183,6 +185,13 @@ android {
         }
     }
 }
+
+tasks.register("generateAppBuildInfo", Exec) {
+    workingDir projectRootDir
+    commandLine "node", buildInfoScript.absolutePath
+}
+
+preBuild.dependsOn tasks.named("generateAppBuildInfo")
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin

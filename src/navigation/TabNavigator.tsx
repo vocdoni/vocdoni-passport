@@ -6,6 +6,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IDsScreen } from '../screens/ids/IDsScreen';
+import { AboutScreen } from '../screens/AboutScreen';
 import { IDDetailsScreen } from '../screens/ids/IDDetailsScreen';
 import { MrzScanScreen } from '../screens/ids/AddIDFlow/MrzScanScreen';
 import { NfcReadScreen } from '../screens/ids/AddIDFlow/NfcReadScreen';
@@ -26,6 +27,7 @@ function IDsStackNavigator() {
   return (
     <IDsStack.Navigator screenOptions={{ headerShown: false }}>
       <IDsStack.Screen name="IDsList" component={IDsScreen} />
+      <IDsStack.Screen name="About" component={AboutScreen} />
       <IDsStack.Screen name="IDDetails" component={IDDetailsScreen} />
       <IDsStack.Screen name="AddIDMrz" component={MrzScanScreen} />
       <IDsStack.Screen name="AddIDNfc" component={NfcReadScreen} />

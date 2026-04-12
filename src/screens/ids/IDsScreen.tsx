@@ -57,6 +57,11 @@ export function IDsScreen() {
     navigation.navigate('ExploreIDMrz');
   }, [navigation]);
 
+  const handleAbout = useCallback(() => {
+    setShowOptionsMenu(false);
+    navigation.navigate('About');
+  }, [navigation]);
+
   const handleIdentity = useCallback(() => {
     setShowOptionsMenu(false);
     navigation.getParent()?.navigate('Wallet');
@@ -115,18 +120,27 @@ export function IDsScreen() {
                 <Text style={styles.menuItemArrow}>→</Text>
               </TouchableOpacity>
 
-              {__DEV__ && (
-                <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
-                  <Text style={styles.menuItemIcon}>🔬</Text>
-                  <View style={styles.menuItemContent}>
-                    <Text style={styles.menuItemTitle}>Explore ID</Text>
-                    <Text style={styles.menuItemDesc}>
-                      Scan and view all raw data from an ID chip
-                    </Text>
-                  </View>
-                  <Text style={styles.menuItemArrow}>→</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
+                <Text style={styles.menuItemIcon}>🔬</Text>
+                <View style={styles.menuItemContent}>
+                  <Text style={styles.menuItemTitle}>Inspect NFC Chip</Text>
+                  <Text style={styles.menuItemDesc}>
+                    Scan and review the full document chip data
+                  </Text>
+                </View>
+                <Text style={styles.menuItemArrow}>→</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
+                <Text style={styles.menuItemIcon}>ℹ️</Text>
+                <View style={styles.menuItemContent}>
+                  <Text style={styles.menuItemTitle}>About Vocdoni Passport</Text>
+                  <Text style={styles.menuItemDesc}>
+                    Learn how the app protects privacy and identity
+                  </Text>
+                </View>
+                <Text style={styles.menuItemArrow}>→</Text>
+              </TouchableOpacity>
 
               <View style={styles.menuDivider} />
               <TouchableOpacity
@@ -260,18 +274,27 @@ export function IDsScreen() {
               <Text style={styles.menuItemArrow}>→</Text>
             </TouchableOpacity>
 
-            {__DEV__ && (
-              <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
-                <Text style={styles.menuItemIcon}>🔬</Text>
-                <View style={styles.menuItemContent}>
-                  <Text style={styles.menuItemTitle}>Explore ID</Text>
-                  <Text style={styles.menuItemDesc}>
-                    Scan and view all raw data from an ID chip
-                  </Text>
-                </View>
-                <Text style={styles.menuItemArrow}>→</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={styles.menuItem} onPress={handleExploreID}>
+              <Text style={styles.menuItemIcon}>🔬</Text>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Inspect NFC Chip</Text>
+                <Text style={styles.menuItemDesc}>
+                  Scan and review the full document chip data
+                </Text>
+              </View>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
+              <Text style={styles.menuItemIcon}>ℹ️</Text>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>About Vocdoni Passport</Text>
+                <Text style={styles.menuItemDesc}>
+                  Learn how the app protects privacy and identity
+                </Text>
+              </View>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
 
             <View style={styles.menuDivider} />
             <TouchableOpacity
