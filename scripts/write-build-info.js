@@ -19,6 +19,12 @@ function runGit(args) {
 }
 
 function resolveGitRef() {
+  const envGitRef = (process.env.APP_BUILD_GIT_REF || '').trim();
+  const envGitRefKind = (process.env.APP_BUILD_GIT_REF_KIND || '').trim();
+  if (envGitRef && (envGitRefKind === 'tag' || envGitRefKind === 'commit')) {
+    return { kind: envGitRefKind, value: envGitRef };
+  }
+
   if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME) {
     return { kind: 'tag', value: process.env.GITHUB_REF_NAME.trim() };
   }
@@ -36,13 +42,22 @@ function resolveGitRef() {
   return { kind: 'commit', value: commit };
 }
 
+function resolveVersion(pkgVersion) {
+  const envVersion = (process.env.APP_BUILD_VERSION || '').trim();
+  if (envVersion) {
+    return envVersion;
+  }
+
+  return String(pkgVersion || '0.0.0').trim();
+}
+
 function quote(value) {
   return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 function main() {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  const version = String(pkg.version || '0.0.0').trim();
+  const version = resolveVersion(pkg.version);
   const gitRef = resolveGitRef();
 
   const content =

@@ -10,29 +10,28 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Button, AppHeader } from '../../components/common';
 import { Card } from '../../components/common/Card';
 import { Spinner } from '../../components/common/Spinner';
 import { colors, borderRadius } from '../../components/common/styles';
-import type { RootStackParamList } from '../../navigation/types';
+import { navigateToSigningRequest } from '../../navigation/rootNavigation';
 import { resolveProofRequestPayload } from '../../utils/requestLinks';
 
 const { ServerQrScanner } = NativeModules;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 export function ScannerScreen() {
-  const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const [scanning, setScanning] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [requestLink, setRequestLink] = useState('');
   const [loadingLink, setLoadingLink] = useState(false);
+
+  const navigateToSigning = useCallback((payload: Awaited<ReturnType<typeof resolveProofRequestPayload>>) => {
+    navigateToSigningRequest(payload);
+  }, []);
 
   const handleScanQR = useCallback(async () => {
     if (!ServerQrScanner) {
@@ -44,7 +43,7 @@ export function ScannerScreen() {
     try {
       const result = await ServerQrScanner.scan();
       const payload = await resolveProofRequestPayload(result?.payload || '');
-      navigation.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
+      navigateToSigning(payload);
     } catch (error: any) {
       if (!error?.message?.includes('cancelled')) {
         Alert.alert('Scan Failed', error?.message || 'Could not scan the QR code.');
@@ -52,7 +51,7 @@ export function ScannerScreen() {
     } finally {
       setScanning(false);
     }
-  }, [navigation]);
+  }, [navigateToSigning]);
 
   const handlePasteLink = useCallback(async () => {
     try {
@@ -71,13 +70,13 @@ export function ScannerScreen() {
       const payload = await resolveProofRequestPayload(requestLink);
       setRequestLink('');
       setShowLinkInput(false);
-      navigation.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
+      navigateToSigning(payload);
     } catch (error: any) {
       Alert.alert('Invalid Link', error?.message || 'Could not load the request link.');
     } finally {
       setLoadingLink(false);
     }
-  }, [navigation, requestLink]);
+  }, [navigateToSigning, requestLink]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

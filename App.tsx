@@ -3,8 +3,8 @@ import 'react-native-get-random-values';
 import 'text-encoding-polyfill';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { StatusBar, View, StyleSheet, BackHandler, Platform, Alert, Linking } from 'react-native';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { StatusBar, View, StyleSheet, BackHandler, Platform, Alert, Linking, ToastAndroid } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Buffer } from 'buffer';
@@ -19,6 +19,7 @@ import { WalletProvider, useWallet } from './src/contexts/WalletContext';
 import { colors } from './src/components/common/styles';
 import type { RootStackParamList } from './src/navigation/types';
 import { resolveProofRequestPayload } from './src/utils/requestLinks';
+import { rootNavigationRef, navigateToSigningRequest } from './src/navigation/rootNavigation';
 
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = Buffer as any;
@@ -48,10 +49,10 @@ function RootNavigator({ needsWalletSetup }: { needsWalletSetup: boolean }) {
 
 function AppContent() {
   const [bootReady, setBootReady] = useState(false);
+  const [navigationReady, setNavigationReady] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const { status, biometricsAvailable, authenticate, refreshAuthState } = useAuth();
   const { status: walletStatus } = useWallet();
-  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const handledUrlRef = useRef<string | null>(null);
   const isProcessingUrlRef = useRef(false);
 
@@ -89,7 +90,7 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (!bootReady || !pendingUrl || isProcessingUrlRef.current) {
+    if (!bootReady || !navigationReady || !pendingUrl || isProcessingUrlRef.current) {
       return;
     }
 
@@ -108,11 +109,11 @@ function AppContent() {
       return;
     }
 
-    isProcessingUrlRef.current = true;
+        isProcessingUrlRef.current = true;
     resolveProofRequestPayload(normalizedUrl)
       .then((payload) => {
         handledUrlRef.current = normalizedUrl;
-        navigationRef.current?.navigate('Signing', { screen: 'ServerCheck', params: { request: payload } });
+        navigateToSigningRequest(payload);
       })
       .catch((error: any) => {
         Alert.alert('Invalid Link', error?.message || 'Could not open the request link.');
@@ -121,18 +122,28 @@ function AppContent() {
         isProcessingUrlRef.current = false;
         setPendingUrl((current) => current === normalizedUrl ? null : current);
       });
-  }, [bootReady, pendingUrl, status, walletStatus]);
+  }, [bootReady, navigationReady, pendingUrl, status, walletStatus]);
 
-  // Handle Android back button - navigate back instead of exiting app
+  // Handle Android back button
   useEffect(() => {
     if (Platform.OS !== 'android') {return;}
 
+    let lastBackPress = 0;
+
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (navigationRef.current?.canGoBack()) {
-        navigationRef.current.goBack();
-        return true; // Prevent default (exit app)
+      if (rootNavigationRef.isReady() && rootNavigationRef.canGoBack()) {
+        rootNavigationRef.goBack();
+        return true;
       }
-      return false; // Allow default behavior (exit app) when at root
+
+      // At the root screen: require two quick back presses to exit
+      const now = Date.now();
+      if (now - lastBackPress < 2000) {
+        return false; // second press within 2 s — exit
+      }
+      lastBackPress = now;
+      ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      return true; // swallow the first press
     });
 
     return () => backHandler.remove();
@@ -178,7 +189,7 @@ function AppContent() {
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={rootNavigationRef} onReady={() => setNavigationReady(true)}>
         <RootNavigator needsWalletSetup={needsWalletSetup} />
       </NavigationContainer>
     </>

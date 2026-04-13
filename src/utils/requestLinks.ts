@@ -1,12 +1,24 @@
 import { Buffer } from 'buffer';
 import { fetchProofRequestPayload, type ProofRequestPayload } from '../services/ServerClient';
 
+// ─── NOTE on React Native URL compatibility ────────────────────────────────────
+// React Native's built-in URL polyfill supports construction (`new URL(str)`)
+// but throws "not implemented" for every property access: .hostname, .pathname,
+// .searchParams, .toString(), etc.  All URL parsing in this file therefore uses
+// plain string operations.  Do NOT introduce new URL(…).anything calls.
+// ──────────────────────────────────────────────────────────────────────────────
+
 function tryJsonParse(value: string): unknown | null {
   try {
     return JSON.parse(value);
   } catch {
     return null;
   }
+}
+
+function isValidHttpUrl(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.startsWith('https://') || lower.startsWith('http://');
 }
 
 export function getQueryParam(rawUrl: string, key: string): string | null {
@@ -66,10 +78,6 @@ export function parseProofRequestPayload(raw: string): ProofRequestPayload {
   return payload as ProofRequestPayload;
 }
 
-function joinUrl(base: string, path: string): string {
-  return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
-}
-
 function decodeSignedPassportLink(encoded: string): { serverHost: string; petitionId: string } {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
@@ -88,26 +96,39 @@ function decodeSignedPassportLink(encoded: string): { serverHost: string; petiti
   return { serverHost, petitionId };
 }
 
-function tryResolveVocdoniPassportLink(parsedUrl: URL): string | null {
-  const pathname = parsedUrl.pathname.replace(/\/+$/, '');
-  if (pathname !== '/passport') {
+/**
+ * Detects compact vocdoni.link/passport?sign=<base64> links and returns the
+ * upstream petition URL to fetch, bypassing the Cloudflare redirect entirely.
+ *
+ * The `sign` parameter is base64(serverHost + "|" + petitionId).
+ * Result URL: https://<serverHost>/petition/<petitionId>
+ *
+ * Uses only string operations — no URL object property access.
+ */
+function tryResolveVocdoniPassportLink(rawUrl: string): string | null {
+  // Case-insensitive match on scheme + host + path prefix using the lowercased copy.
+  // The raw URL is kept for getQueryParam so percent-encoding is preserved.
+  const lower = rawUrl.toLowerCase();
+  const PREFIX = 'https://vocdoni.link/passport';
+
+  if (!lower.startsWith(PREFIX)) {
     return null;
   }
 
-  const sign = (parsedUrl.searchParams.get('sign') || '').trim();
+  // The character immediately after "/passport" must be end-of-string, "/", "?", or "#".
+  // This prevents "https://vocdoni.link/passportX" from matching.
+  const afterPath = lower.slice(PREFIX.length);
+  if (afterPath !== '' && !afterPath.startsWith('/') && !afterPath.startsWith('?') && !afterPath.startsWith('#')) {
+    return null;
+  }
+
+  const sign = (getQueryParam(rawUrl, 'sign') || '').trim();
   if (!sign) {
     throw new Error('Passport link is missing sign payload');
   }
+
   const { serverHost, petitionId } = decodeSignedPassportLink(sign);
-
-  let upstreamBase: URL;
-  try {
-    upstreamBase = new URL(`https://${serverHost}`);
-  } catch {
-    throw new Error('Passport link server host is invalid');
-  }
-
-  return joinUrl(upstreamBase.toString(), `/petition/${petitionId}`);
+  return `https://${serverHost}/petition/${petitionId}`;
 }
 
 export async function resolveProofRequestPayload(raw: string): Promise<ProofRequestPayload> {
@@ -116,30 +137,33 @@ export async function resolveProofRequestPayload(raw: string): Promise<ProofRequ
     throw new Error('Empty request payload');
   }
 
+  // 1. Try as an embedded payload (raw JSON or base64 via ?payload= / ?request= / ?c=)
   try {
     return parseProofRequestPayload(text);
   } catch {}
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(text);
-  } catch {
+  // 2. Must be an HTTP(S) URL to proceed
+  if (!isValidHttpUrl(text)) {
     throw new Error('Request is neither valid JSON nor a valid URL');
   }
 
+  // 3. Embedded payload params already handled by parseProofRequestPayload above,
+  //    but if that threw for a different reason re-check explicitly
   const embeddedPayload =
-    getQueryParam(parsedUrl.toString(), 'payload') ||
-    getQueryParam(parsedUrl.toString(), 'request') ||
-    getQueryParam(parsedUrl.toString(), 'c');
+    getQueryParam(text, 'payload') ||
+    getQueryParam(text, 'request') ||
+    getQueryParam(text, 'c');
 
   if (embeddedPayload) {
     return parseProofRequestPayload(text);
   }
 
-  const vocdoniPassportRequestUrl = tryResolveVocdoniPassportLink(parsedUrl);
+  // 4. Compact vocdoni.link/passport?sign=… link — decode locally, fetch upstream
+  const vocdoniPassportRequestUrl = tryResolveVocdoniPassportLink(text);
   if (vocdoniPassportRequestUrl) {
     return fetchProofRequestPayload(vocdoniPassportRequestUrl);
   }
 
-  return fetchProofRequestPayload(parsedUrl.toString());
+  // 5. Treat as a direct petition JSON endpoint
+  return fetchProofRequestPayload(text);
 }

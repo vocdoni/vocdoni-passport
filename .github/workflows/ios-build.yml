@@ -73,6 +73,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Determine build metadata
+        id: build-meta
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -n "${GITHUB_REF_NAME}" ]; then
+            echo "app_build_git_ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "app_build_git_ref_kind=tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_build_git_ref=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+            echo "app_build_git_ref_kind=commit" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -152,6 +163,9 @@ jobs:
       - name: Build iOS app (Development)
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type != 'release' }}
         working-directory: ios
+        env:
+          APP_BUILD_GIT_REF: ${{ steps.build-meta.outputs.app_build_git_ref }}
+          APP_BUILD_GIT_REF_KIND: ${{ steps.build-meta.outputs.app_build_git_ref_kind }}
         run: |
           set -o pipefail
 
@@ -225,6 +239,9 @@ jobs:
       - name: Build iOS app (Release)
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
         working-directory: ios
+        env:
+          APP_BUILD_GIT_REF: ${{ steps.build-meta.outputs.app_build_git_ref }}
+          APP_BUILD_GIT_REF_KIND: ${{ steps.build-meta.outputs.app_build_git_ref_kind }}
         run: |
           set -o pipefail
 

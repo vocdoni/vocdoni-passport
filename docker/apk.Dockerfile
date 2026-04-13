@@ -38,6 +38,8 @@ ARG ANDROID_VERSION_NAME=1.0
 ARG ANDROID_VERSION_CODE=1
 ARG ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL=SYMBOL_TABLE
 ARG ANDROID_UPLOAD_STORE_TYPE=JKS
+ARG APP_BUILD_GIT_REF=
+ARG APP_BUILD_GIT_REF_KIND=commit
 
 # =============================================================================
 # System Dependencies
@@ -204,9 +206,18 @@ COPY android/gradle.properties android/gradle.properties
 COPY android/gradle/ android/gradle/
 COPY android/gradlew android/gradlew
 
-# Pre-fetch Gradle dependencies
+# Pre-fetch Gradle distribution and project dependencies (cached layer).
+# Retries up to 5 times with exponential backoff so a transient 504 from
+# services.gradle.org / GitHub does not silently produce an empty cache
+# that forces a re-download (and a second failure) in the build step.
 WORKDIR /app/VocdoniPassport/android
-RUN chmod +x gradlew && ./gradlew --no-daemon dependencies 2>/dev/null || true
+RUN chmod +x gradlew && \
+    for attempt in 1 2 3 4 5; do \
+        ./gradlew --no-daemon dependencies --console=plain && break; \
+        [ "$attempt" -lt 5 ] || { echo "Gradle download failed after 5 attempts"; exit 1; }; \
+        echo "Attempt $attempt failed — retrying in $((attempt * 15))s..."; \
+        sleep $((attempt * 15)); \
+    done
 
 # Copy full source
 WORKDIR /app/VocdoniPassport
@@ -244,6 +255,9 @@ RUN --mount=type=secret,id=android_keystore_base64,required=false \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_NAME="${ANDROID_VERSION_NAME}"; \
     export ORG_GRADLE_PROJECT_ANDROID_VERSION_CODE="${ANDROID_VERSION_CODE}"; \
     export ORG_GRADLE_PROJECT_ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL="${ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL}"; \
+    export APP_BUILD_VERSION="${ANDROID_VERSION_NAME}"; \
+    export APP_BUILD_GIT_REF="${APP_BUILD_GIT_REF}"; \
+    export APP_BUILD_GIT_REF_KIND="${APP_BUILD_GIT_REF_KIND}"; \
     if [ -f /run/secrets/android_keystore_base64 ]; then \
         KEYSTORE_PATH=/tmp/android-upload-keystore; \
         tr -d '\r\n\t ' < /run/secrets/android_keystore_base64 | base64 -d > "${KEYSTORE_PATH}"; \

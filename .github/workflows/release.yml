@@ -45,6 +45,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       android_version_name: ${{ steps.version.outputs.android_version_name }}
+      app_build_git_ref: ${{ steps.version.outputs.app_build_git_ref }}
+      app_build_git_ref_kind: ${{ steps.version.outputs.app_build_git_ref_kind }}
       
     steps:
       - name: Determine version
@@ -57,6 +59,8 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "android_version_name=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "app_build_git_ref=$VERSION" >> $GITHUB_OUTPUT
+          echo "app_build_git_ref_kind=tag" >> $GITHUB_OUTPUT
 
   # Run tests first
   test:
@@ -204,6 +208,8 @@ jobs:
             ANDROID_VERSION_NAME=${{ needs.prepare.outputs.android_version_name }}
             ANDROID_VERSION_CODE=${{ github.run_number }}
             ANDROID_UPLOAD_STORE_TYPE=${{ env.ANDROID_UPLOAD_STORE_TYPE }}
+            APP_BUILD_GIT_REF=${{ needs.prepare.outputs.app_build_git_ref }}
+            APP_BUILD_GIT_REF_KIND=${{ needs.prepare.outputs.app_build_git_ref_kind }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
           secret-files: |
@@ -335,6 +341,10 @@ jobs:
 
       - name: Build iOS app (Simulator)
         working-directory: ios
+        env:
+          APP_BUILD_VERSION: ${{ needs.prepare.outputs.android_version_name }}
+          APP_BUILD_GIT_REF: ${{ needs.prepare.outputs.app_build_git_ref }}
+          APP_BUILD_GIT_REF_KIND: ${{ needs.prepare.outputs.app_build_git_ref_kind }}
         run: |
           set -o pipefail
 

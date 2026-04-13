@@ -69,6 +69,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Determine build metadata
+        id: build-meta
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -n "${GITHUB_REF_NAME}" ]; then
+            echo "app_build_git_ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "app_build_git_ref_kind=tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_build_git_ref=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+            echo "app_build_git_ref_kind=commit" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -107,6 +118,8 @@ jobs:
           file: docker/apk.Dockerfile
           build-args: |
             GRADLE_TASK=${{ steps.build-task.outputs.task }}
+            APP_BUILD_GIT_REF=${{ steps.build-meta.outputs.app_build_git_ref }}
+            APP_BUILD_GIT_REF_KIND=${{ steps.build-meta.outputs.app_build_git_ref_kind }}
           tags: ${{ env.DOCKER_IMAGE }}:latest
           load: true
 

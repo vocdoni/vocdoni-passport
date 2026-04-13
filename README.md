@@ -180,6 +180,51 @@ See [docs/releasing.md](docs/releasing.md) for:
 - tag-based releases
 - TestFlight uploads for iPhone testing
 
+## App Icons
+
+### Updating the icon
+
+Replace `assets/logo_blue_solid.png` with the new icon (1024×1024px, square, solid blue background — no transparency) and run:
+
+```bash
+python3 scripts/generate-android-launcher-icons.py
+```
+
+This regenerates all Android and iOS icon sizes from that single source file.
+
+### Source file spec
+
+| File | Size | Use |
+|------|------|-----|
+| `assets/logo_blue_solid.png` | 1024×1024px | Source for all generated icons |
+
+Requirements for `logo_blue_solid.png`:
+- Square, no transparency (iOS does not support transparent app icons)
+- Logo artwork should sit within the **center ~680px** (66% of 1024px) so it lands inside Android's adaptive icon safe zone after scaling
+- Solid background color (used for the Android background XML layer)
+
+### What the script generates
+
+**Android adaptive icons** (`mipmap-anydpi-v26/`):
+- `ic_launcher_background.xml` — solid color rectangle matching the source background
+- `ic_launcher_foreground.png` at mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi — extracted white logo on transparent canvas, sized to fit within Android's safe zone (inner 66% of each canvas)
+
+**Android legacy icons** (for Android < 8.0):
+- `ic_launcher.png` and `ic_launcher_round.png` at all densities (48–192px)
+
+**iOS icons** (`ios/VocdoniPassport/Images.xcassets/AppIcon.appiconset/`):
+- All required sizes (40–180px + 1024px marketing icon)
+- `Contents.json` updated automatically
+
+### Play Store / App Store submission
+
+The script does not generate the Play Store listing icon. Export it separately:
+
+| Store | Size | Format |
+|-------|------|--------|
+| Google Play | 512×512px | PNG, no alpha |
+| App Store | 1024×1024px | PNG, no alpha (same as `Icon-1024.png`) |
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request.

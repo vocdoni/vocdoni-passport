@@ -5,7 +5,7 @@ export type AppBuildInfo = {
 };
 
 export const APP_BUILD_INFO: AppBuildInfo = {
-  version: '0.1.0',
-  gitRef: '32f8a83',
+  version: '1.0',
+  gitRef: '500ebb3',
   gitRefKind: 'commit',
 };

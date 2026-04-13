@@ -34,6 +34,8 @@ NATIVE_DEBUG_SYMBOLS_PATH := $(OUT_DIR)/native-debug-symbols.zip
 
 # Docker image name
 DOCKER_IMAGE ?= vocdoni-passport-android
+APP_BUILD_GIT_REF ?= $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || printf '%s' "unknown")
+APP_BUILD_GIT_REF_KIND ?= $(shell if git describe --tags --exact-match >/dev/null 2>&1; then printf '%s' "tag"; else printf '%s' "commit"; fi)
 
 .PHONY: help prepare prepare-prover-source apk aab native-debug-symbols \
         apk-install apk-reset apk-clean-install fixture-pull ios-info clean
@@ -136,6 +138,8 @@ apk: prepare-prover-source
 	$(DOCKER) build \
 		-f docker/apk.Dockerfile \
 		--build-arg GRADLE_TASK=assembleRelease \
+		--build-arg APP_BUILD_GIT_REF='$(APP_BUILD_GIT_REF)' \
+		--build-arg APP_BUILD_GIT_REF_KIND='$(APP_BUILD_GIT_REF_KIND)' \
 		-t $(DOCKER_IMAGE) \
 		.
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
@@ -154,6 +158,8 @@ aab: prepare-prover-source
 	$(DOCKER) build \
 		-f docker/apk.Dockerfile \
 		--build-arg GRADLE_TASK=bundleRelease \
+		--build-arg APP_BUILD_GIT_REF='$(APP_BUILD_GIT_REF)' \
+		--build-arg APP_BUILD_GIT_REF_KIND='$(APP_BUILD_GIT_REF_KIND)' \
 		-t $(DOCKER_IMAGE) \
 		.
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true
@@ -172,6 +178,8 @@ native-debug-symbols: prepare-prover-source
 	$(DOCKER) build \
 		-f docker/apk.Dockerfile \
 		--build-arg GRADLE_TASK=assembleRelease \
+		--build-arg APP_BUILD_GIT_REF='$(APP_BUILD_GIT_REF)' \
+		--build-arg APP_BUILD_GIT_REF_KIND='$(APP_BUILD_GIT_REF_KIND)' \
 		-t $(DOCKER_IMAGE) \
 		.
 	@$(DOCKER) rm -f apk-extract 2>/dev/null || true

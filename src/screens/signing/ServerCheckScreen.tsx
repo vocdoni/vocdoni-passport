@@ -102,8 +102,14 @@ export function ServerCheckScreen() {
 }
 
 function getDomain(url: string): string {
+  // Avoid URL object property access — throws "not implemented" in React Native.
+  // Extract hostname with a simple string slice between "://" and the next "/".
   try {
-    return new URL(url).hostname;
+    const start = url.indexOf('://');
+    if (start < 0) { return url; }
+    const hostStart = start + 3;
+    const hostEnd = url.indexOf('/', hostStart);
+    return hostEnd < 0 ? url.slice(hostStart) : url.slice(hostStart, hostEnd);
   } catch {
     return url;
   }

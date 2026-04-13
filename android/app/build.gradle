@@ -189,6 +189,7 @@ android {
 tasks.register("generateAppBuildInfo", Exec) {
     workingDir projectRootDir
     commandLine "node", buildInfoScript.absolutePath
+    environment "APP_BUILD_VERSION", androidVersionNameOverride ?: "1.0"
 }
 
 preBuild.dependsOn tasks.named("generateAppBuildInfo")

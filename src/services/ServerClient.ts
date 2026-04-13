@@ -45,14 +45,14 @@ export async function fetchProofRequestPayload(requestUrl: string): Promise<Proo
     throw new Error('Request link is empty');
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
+  // Validate with a string check — avoid URL object property access which throws
+  // "not implemented" in React Native (same constraint as requestLinks.ts).
+  const lower = trimmed.toLowerCase();
+  if (!lower.startsWith('http://') && !lower.startsWith('https://')) {
     throw new Error('Request link is not a valid URL');
   }
 
-  const resp = await fetch(parsed.toString(), {
+  const resp = await fetch(trimmed, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });
