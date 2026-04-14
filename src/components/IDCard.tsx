@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import type { StoredID } from '../storage/idStorage';
 import { colors, borderRadius } from './common/styles';
 
@@ -23,6 +23,52 @@ const COUNTRY_FLAGS: Record<string, string> = {
   JPN: '🇯🇵', KOR: '🇰🇷', CHN: '🇨🇳', IND: '🇮🇳', RUS: '🇷🇺', TUR: '🇹🇷',
 };
 
+// Maps country code → { MRZ type char → document name }.
+// MRZ type char is the first character of the document code:
+//   'P' = Passport/travel document   'I'/'A'/'C' = National ID card
+const DOC_LABELS: Record<string, Record<string, string>> = {
+  ESP: { I: 'DNI', P: 'Pasaporte' },
+  DEU: { I: 'Personalausweis', P: 'Reisepass' },
+  FRA: { I: 'CNI', P: 'Passeport' },
+  ITA: { I: "Carta d'Identità", P: 'Passaporto' },
+  PRT: { I: 'Cartão de Cidadão', P: 'Passaporte' },
+  NLD: { I: 'Identiteitskaart' },
+  BEL: { I: 'eID' },
+  AUT: { I: 'Personalausweis' },
+  CHE: { I: 'Identitätskarte' },
+  POL: { I: 'Dowód Osobisty' },
+  SWE: { I: 'Nationellt ID-kort' },
+  NOR: { I: 'ID-kort' },
+  DNK: { I: 'Nationalt ID-kort' },
+  FIN: { I: 'Henkilökortti' },
+  IRL: { I: 'National ID Card' },
+  GRC: { I: 'Αστυνομική Ταυτότητα' },
+  CZE: { I: 'Občanský Průkaz' },
+  HUN: { I: 'Személyi igazolvány' },
+  ROU: { I: 'Carte de identitate' },
+  BGR: { I: 'Лична карта' },
+  HRV: { I: 'Osobna iskaznica' },
+  SVK: { I: 'Občianský preukaz' },
+  SVN: { I: 'Osebna izkaznica' },
+  LTU: { I: 'Asmens tapatybės kortelė' },
+  LVA: { I: 'Personas apliecība' },
+  EST: { I: 'Isikutunnistus' },
+  CYP: { I: 'Δελτίο Ταυτότητας' },
+  MLT: { I: 'Karta tal-Identità' },
+  LUX: { I: "Carte d'identité" },
+};
+
+export function getDocumentLabel(issuingCountry: string, mrzDocCode?: string): string {
+  const typeChar = mrzDocCode?.[0];
+  if (typeChar) {
+    const label = DOC_LABELS[issuingCountry]?.[typeChar];
+    if (label) {return label;}
+  }
+  if (!typeChar || typeChar === 'P') {return 'Passport';}
+  if (typeChar === 'V') {return 'Visa';}
+  return 'ID Card';
+}
+
 const COUNTRY_NAMES: Record<string, string> = {
   ESP: 'Spain', DEU: 'Germany', FRA: 'France', ITA: 'Italy', GBR: 'United Kingdom',
   USA: 'United States', PRT: 'Portugal', NLD: 'Netherlands', BEL: 'Belgium',
@@ -38,7 +84,7 @@ const COUNTRY_NAMES: Record<string, string> = {
 export function IDCard({ id, blurred = false, onPress }: IDCardProps) {
   const flag = COUNTRY_FLAGS[id.issuingCountry] || '🏳️';
   const countryName = COUNTRY_NAMES[id.issuingCountry] || id.issuingCountry;
-  const docType = id.documentType === 'passport' ? 'PASSPORT' : 'ID CARD';
+  const docType = getDocumentLabel(id.issuingCountry, id.mrzDocCode).toUpperCase();
   const maskedDocNum = maskDocumentNumber(id.documentNumber);
   const fullName = `${id.firstName} ${id.lastName}`.trim();
 
@@ -60,17 +106,9 @@ export function IDCard({ id, blurred = false, onPress }: IDCardProps) {
 
         <View style={styles.body}>
           <View style={styles.photoContainer}>
-            {id.photo ? (
-              <Image
-                source={{ uri: getPhotoUri(id.photo) }}
-                style={[styles.photo, blurred && styles.blurred]}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.photo, styles.photoPlaceholder]}>
-                <Text style={styles.photoPlaceholderText}>👤</Text>
-              </View>
-            )}
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Text style={styles.photoPlaceholderText}>👤</Text>
+            </View>
           </View>
 
           <View style={styles.info}>
@@ -115,7 +153,7 @@ export function IDCard({ id, blurred = false, onPress }: IDCardProps) {
 
 export function IDCardCompact({ id, selected, onPress }: { id: StoredID; selected?: boolean; onPress?: () => void }) {
   const flag = COUNTRY_FLAGS[id.issuingCountry] || '🏳️';
-  const docType = id.documentType === 'passport' ? 'Passport' : 'ID Card';
+  const docType = getDocumentLabel(id.issuingCountry, id.mrzDocCode);
   const maskedDocNum = maskDocumentNumber(id.documentNumber);
   const fullName = `${id.firstName} ${id.lastName}`.trim();
 
@@ -141,23 +179,6 @@ function maskDocumentNumber(docNum: string): string {
   if (docNum.length <= 4) {return docNum;}
   const visible = docNum.slice(-4);
   return `****${visible}`;
-}
-
-function getPhotoUri(base64Photo: string): string {
-  // Detect image format from base64 data
-  // JPEG starts with /9j/ in base64 (0xFF 0xD8 in hex)
-  // JPEG2000 starts with AAAA in base64 (0x00 0x00 0x00 in hex) or similar
-  // PNG starts with iVBO in base64
-  if (base64Photo.startsWith('/9j/') || base64Photo.startsWith('/9j+')) {
-    return `data:image/jpeg;base64,${base64Photo}`;
-  }
-  if (base64Photo.startsWith('iVBO')) {
-    return `data:image/png;base64,${base64Photo}`;
-  }
-  // For JPEG2000 and other formats, try generic approach
-  // JPEG2000 is not natively supported, but some devices might handle it
-  // Try as JPEG first (most common), then as generic image
-  return `data:image/jpeg;base64,${base64Photo}`;
 }
 
 function formatExpiry(date: string): string {
@@ -314,7 +335,7 @@ const styles = StyleSheet.create({
   },
   compactCardSelected: {
     borderColor: colors.primary,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
   },
   radioOuter: {
     width: 22,

@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   track: {
     width: SLIDER_WIDTH,
     height: THUMB_SIZE + TRACK_PADDING * 2,
-    backgroundColor: '#e8edf5',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',

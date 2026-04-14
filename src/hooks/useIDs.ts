@@ -34,9 +34,8 @@ export function useIDs() {
   const addID = useCallback(async (
     dg1: string,
     sod: string,
-    dg2?: string,
   ): Promise<StoredID> => {
-    const parsed = parsePassportData(dg1, sod, dg2);
+    const parsed = parsePassportData(dg1, sod);
     const newId: StoredID = {
       ...parsed,
       id: generateIDId(),

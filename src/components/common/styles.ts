@@ -2,40 +2,40 @@ import { StyleSheet, Platform, StatusBar } from 'react-native';
 
 export const colors = {
   primary: '#2e6cff',
-  primaryLight: '#ecf2ff',
+  primaryLight: 'rgba(46,108,255,0.15)',
   primaryDark: '#214fb6',
-  infoLight: '#f0f5ff',
-  infoBorder: '#d4e2ff',
+  infoLight: 'rgba(46,108,255,0.1)',
+  infoBorder: 'rgba(46,108,255,0.2)',
 
-  background: '#f3f6fb',
-  surface: '#ffffff',
-  surfaceDark: '#111827',
+  background: '#0a0f1a',
+  surface: '#131929',
+  surfaceDark: '#0e1422',
 
-  text: '#0f172a',
-  textSecondary: '#51607a',
-  textMuted: '#6b7b93',
+  text: '#f0f4ff',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
   textOnDark: '#f8fafc',
   textOnDarkMuted: '#c7d0e2',
 
   success: '#1f9254',
-  successLight: '#e8fbef',
-  successDark: '#067647',
-  successBorder: '#b7ebcb',
+  successLight: 'rgba(31,146,84,0.18)',
+  successDark: '#4ade80',
+  successBorder: 'rgba(31,146,84,0.25)',
 
-  error: '#d92d20',
-  errorLight: '#feefef',
-  errorDark: '#b42318',
-  errorBorder: '#fecaca',
+  error: '#ef4444',
+  errorLight: 'rgba(239,68,68,0.15)',
+  errorDark: '#f87171',
+  errorBorder: 'rgba(239,68,68,0.25)',
 
-  warning: '#dc6803',
-  warningLight: '#fef4e6',
-  warningDark: '#b45309',
-  warningBorder: '#fed7aa',
+  warning: '#f59e0b',
+  warningLight: 'rgba(245,158,11,0.15)',
+  warningDark: '#fcd34d',
+  warningBorder: 'rgba(245,158,11,0.25)',
 
-  border: '#e4ebf8',
-  borderLight: '#d7e1f1',
+  border: 'rgba(255,255,255,0.08)',
+  borderLight: 'rgba(255,255,255,0.05)',
 
-  cardShadow: '#0b1220',
+  cardShadow: '#000000',
 };
 
 export const spacing = {
@@ -85,7 +85,7 @@ export const typography = {
   label: {
     fontSize: 13,
     fontWeight: '700' as const,
-    color: '#334155',
+    color: colors.textSecondary,
   },
 };
 

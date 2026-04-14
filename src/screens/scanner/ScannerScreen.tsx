@@ -149,7 +149,7 @@ export function ScannerScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               placeholder="https://server.example/api/request..."
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={colors.textMuted}
               style={styles.linkInput}
               multiline
             />
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   scannerFrame: {
     width: SCREEN_WIDTH - 80,
     height: SCREEN_WIDTH - 80,
-    backgroundColor: '#1a1f36',
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -236,10 +236,10 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#fff',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   qrCellFilled: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   qrCornerTL: {
     position: 'absolute',
@@ -340,8 +340,8 @@ const styles = StyleSheet.create({
   linkInput: {
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: '#f8fbff',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceDark,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: colors.text,

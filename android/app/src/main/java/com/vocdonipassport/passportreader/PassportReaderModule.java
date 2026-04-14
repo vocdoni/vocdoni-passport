@@ -35,7 +35,6 @@ import org.jmrtd.lds.SecurityInfo;
 import org.jmrtd.lds.CardAccessFile;
 
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.IOException;
 import java.security.Security;
 import java.util.Collection;

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { colors } from './styles';
 
-const APP_LOGO = require('../../../assets/logo.png');
+const APP_LOGO = require('../../../assets/vocdoni_passport_dark.png');
 
 interface AppHeaderProps {
   showSeparator?: boolean;
@@ -10,11 +10,10 @@ interface AppHeaderProps {
 
 export function AppHeader({ showSeparator = true }: AppHeaderProps) {
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, showSeparator && styles.headerWithShadow]}>
       <View style={styles.logoContainer}>
         <Image source={APP_LOGO} style={styles.logo} resizeMode="contain" />
       </View>
-      {showSeparator && <View style={styles.separator} />}
     </View>
   );
 }
@@ -23,18 +22,21 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.background,
   },
+  headerWithShadow: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
   logoContainer: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   logo: {
-    height: 48,
-    width: 192,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: 20,
-    opacity: 0.6,
+    height: 56,
+    width: 224,
   },
 });

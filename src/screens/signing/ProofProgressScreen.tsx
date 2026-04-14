@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components/common';
 import { colors, borderRadius } from '../../components/common/styles';
 import { getIDById } from '../../storage/idStorage';
+import { getDocumentLabel } from '../../components/IDCard';
 import { saveSignature, generateSignatureId } from '../../storage/historyStorage';
 import {
   generatePassportInnerProofPackage,
@@ -187,7 +188,7 @@ export function ProofProgressScreen() {
       return;
     }
 
-    addLog('info', `Using ${storedId.issuingCountry} ${storedId.documentType}`);
+    addLog('info', `Using ${storedId.issuingCountry} ${getDocumentLabel(storedId.issuingCountry, storedId.mrzDocCode)}`);
     updateStep('prepare', 'active');
     Animated.timing(progressAnim, { toValue: 0.1, duration: 300, useNativeDriver: false }).start();
 
@@ -197,7 +198,7 @@ export function ProofProgressScreen() {
         addLog('info', `Binding wallet address: ${walletAddress.slice(0, 10)}...${walletAddress.slice(-8)}`);
       }
       const inner = await generatePassportInnerProofPackage(
-        { dg1: storedId.dg1, sod: storedId.sod, dg2: storedId.dg2 },
+        { dg1: storedId.dg1, sod: storedId.sod },
         (phase, detail) => {
           const stepId = mapPhaseToStep(phase);
           updateStep(stepId, 'active');
@@ -247,7 +248,7 @@ export function ProofProgressScreen() {
         nullifier: result.nullifier,
         durationMs,
         usedIdRef: selectedIdRef,
-        usedIdLabel: `${storedId.issuingCountry} ${storedId.documentType === 'passport' ? 'Passport' : 'ID Card'}`,
+        usedIdLabel: `${storedId.issuingCountry} ${getDocumentLabel(storedId.issuingCountry, storedId.mrzDocCode)}`,
       });
 
       setTimeout(() => {
@@ -301,7 +302,7 @@ export function ProofProgressScreen() {
           durationMs,
           usedIdRef: selectedIdRef,
           usedIdLabel: storedId
-            ? `${storedId.issuingCountry} ${storedId.documentType === 'passport' ? 'Passport' : 'ID Card'}`
+            ? `${storedId.issuingCountry} ${getDocumentLabel(storedId.issuingCountry, storedId.mrzDocCode)}`
             : 'Unknown',
         });
       }

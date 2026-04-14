@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FlowStepIndicator } from '../../../components/common';
 import { colors, borderRadius } from '../../../components/common/styles';
 import { getIDById, type StoredID } from '../../../storage/idStorage';
+import { getDocumentLabel } from '../../../components/IDCard';
 import type { IDsStackParamList } from '../../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<IDsStackParamList, 'AddIDSuccess'>;
@@ -74,7 +75,7 @@ export function AddIDSuccessScreen() {
   };
 
   const flag = id ? (COUNTRY_FLAGS[id.issuingCountry] || '🏳️') : '🪪';
-  const docType = id?.documentType === 'passport' ? 'Passport' : 'ID Card';
+  const docType = id ? getDocumentLabel(id.issuingCountry, id.mrzDocCode) : 'ID Document';
   const fullName = id ? `${id.firstName} ${id.lastName}`.trim() : '';
 
   return (

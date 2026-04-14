@@ -219,12 +219,12 @@ export function ExploreMrzScreen() {
 const styles = StyleSheet.create({
   debugBanner: {
     flexDirection: 'row',
-    backgroundColor: '#e8f5e9',
+    backgroundColor: colors.successLight,
     padding: 14,
     borderRadius: borderRadius.lg,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#a5d6a7',
+    borderColor: colors.successBorder,
   },
   debugIcon: {
     fontSize: 24,
@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
   debugTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#2e7d32',
+    color: colors.successDark,
     marginBottom: 4,
   },
   debugText: {
     fontSize: 13,
-    color: '#388e3c',
+    color: colors.successDark,
     lineHeight: 18,
   },
   scanOption: {

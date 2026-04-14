@@ -98,13 +98,13 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#d4e2ff',
+    borderColor: colors.primary,
   },
   secondaryText: {
-    color: colors.primaryDark,
+    color: colors.primary,
   },
   subtle: {
-    backgroundColor: '#f7f9fd',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     opacity: 0.52,
   },
   disabledText: {
-    color: '#8da0bd',
+    color: colors.textMuted,
   },
   backLink: {
     color: colors.primary,

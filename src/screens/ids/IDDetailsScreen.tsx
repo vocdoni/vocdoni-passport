@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackButton, Button } from '../../components/common';
 import { Card } from '../../components/common/Card';
+import { getDocumentLabel } from '../../components/IDCard';
 import { Spinner } from '../../components/common/Spinner';
 import { colors, commonStyles, borderRadius } from '../../components/common/styles';
 import { getIDById, deleteID, type StoredID } from '../../storage/idStorage';
@@ -78,7 +79,7 @@ export function IDDetailsScreen() {
 
   const flag = COUNTRY_FLAGS[id.issuingCountry] || '🏳️';
   const countryName = COUNTRY_NAMES[id.issuingCountry] || id.issuingCountry;
-  const docType = id.documentType === 'passport' ? 'Passport' : 'ID Card';
+  const docType = getDocumentLabel(id.issuingCountry, id.mrzDocCode);
   const fullName = `${id.firstName} ${id.lastName}`.trim();
   const addedDate = new Date(id.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -92,17 +93,9 @@ export function IDDetailsScreen() {
         <BackButton onPress={() => navigation.goBack()} />
 
         <View style={styles.heroCard}>
-          {id.photo ? (
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${id.photo}` }}
-              style={styles.photo}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Text style={styles.photoPlaceholderText}>📷</Text>
-            </View>
-          )}
+          <View style={[styles.photo, styles.photoPlaceholder]}>
+            <Text style={styles.photoPlaceholderText}>👤</Text>
+          </View>
           <View style={styles.heroInfo}>
             <Text style={styles.heroFlag}>{flag}</Text>
             <Text style={styles.heroDocType}>{docType.toUpperCase()} - {countryName.toUpperCase()}</Text>
@@ -122,8 +115,7 @@ export function IDDetailsScreen() {
           <InfoRow label="Added on" value={addedDate} />
           <InfoRow label="DG1 Size" value={`${Math.round(id.dg1.length * 0.75)} bytes`} />
           <InfoRow label="SOD Size" value={formatBytes(id.sod.length * 0.75)} />
-          <InfoRow label="Document Type" value={id.documentType === 'passport' ? 'TD3 (Passport)' : 'TD1/TD2 (ID Card)'} />
-          <InfoRow label="Has Photo" value={id.photo ? 'Yes' : 'No'} />
+          <InfoRow label="Document Type" value={`${getDocumentLabel(id.issuingCountry, id.mrzDocCode)}${id.mrzDocCode ? ` (${id.mrzDocCode})` : ''}`} />
         </Card>
 
         <Button
@@ -154,12 +146,14 @@ function formatBytes(bytes: number): string {
 
 const styles = StyleSheet.create({
   heroCard: {
-    backgroundColor: '#1a1f36',
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     padding: 20,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   photo: {
     width: 80,

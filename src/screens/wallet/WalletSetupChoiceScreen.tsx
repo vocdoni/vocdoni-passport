@@ -6,7 +6,7 @@ import { Button } from '../../components/common';
 import { colors, commonStyles, borderRadius } from '../../components/common/styles';
 import type { WalletStackParamList } from '../../navigation/types';
 
-const APP_LOGO = require('../../../assets/logo.png');
+const APP_LOGO = require('../../../assets/vocdoni_passport_dark.png');
 
 type NavigationProp = NativeStackNavigationProp<WalletStackParamList, 'WalletSetupChoice'>;
 
@@ -67,21 +67,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     marginBottom: 32,
   },
   logo: {
-    width: 140,
+    width: 200,
     height: 56,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -110,7 +106,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: colors.warningBorder,
   },
   infoIcon: {
     fontSize: 18,

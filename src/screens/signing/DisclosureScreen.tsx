@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   disclosureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
     padding: 12,
     borderRadius: borderRadius.md,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#b6e2c6',
+    borderColor: colors.successBorder,
   },
   privacyIcon: {
     fontSize: 18,
@@ -306,12 +306,12 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     flexDirection: 'row',
-    backgroundColor: '#fff5f5',
+    backgroundColor: colors.errorLight,
     padding: 14,
     borderRadius: borderRadius.lg,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#fdd',
+    borderColor: colors.errorBorder,
   },
   errorIcon: {
     fontSize: 18,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#c53030',
+    color: colors.errorDark,
     marginBottom: 4,
   },
   sliderContainer: {

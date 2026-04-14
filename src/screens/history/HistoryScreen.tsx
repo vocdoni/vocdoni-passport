@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   nullifierBox: {
     marginTop: 8,
     padding: 10,
-    backgroundColor: '#f8f9fb',
+    backgroundColor: colors.surfaceDark,
     borderRadius: borderRadius.md,
   },
   nullifierLabel: {
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,

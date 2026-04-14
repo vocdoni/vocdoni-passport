@@ -133,6 +133,7 @@ export function MrzScanScreen() {
               value={doc}
               onChangeText={setDoc}
               placeholder="AB1234567"
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
               maxLength={9}
@@ -144,6 +145,7 @@ export function MrzScanScreen() {
               value={dob}
               onChangeText={setDob}
               placeholder="900115"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               maxLength={6}
             />
@@ -154,6 +156,7 @@ export function MrzScanScreen() {
               value={exp}
               onChangeText={setExp}
               placeholder="300115"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               maxLength={6}
             />
@@ -188,10 +191,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   mrzExample: {
-    backgroundColor: '#f8f9fb',
+    backgroundColor: colors.surfaceDark,
     padding: 12,
     borderRadius: borderRadius.md,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   mrzText: {
     fontFamily: 'monospace',
@@ -207,18 +212,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
+    color: colors.textSecondary,
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
     borderRadius: borderRadius.lg,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#f9fbff',
+    backgroundColor: colors.surfaceDark,
     color: colors.text,
   },
   errorText: {

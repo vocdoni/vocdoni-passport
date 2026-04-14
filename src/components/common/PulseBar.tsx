@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   rail: {
     height: 8,
     borderRadius: borderRadius.full,
-    backgroundColor: '#dde7fb',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     overflow: 'hidden',
     marginBottom: 14,
   },

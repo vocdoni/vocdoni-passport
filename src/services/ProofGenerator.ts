@@ -550,7 +550,7 @@ function buildPassportViewModel(pd: PassportData): any {
     chipAuthSuccess: false,
     chipAuthFailed: false,
     LDSVersion: '',
-    documentType: mrz.length === 88 ? 'passport' : 'id_card',
+    documentType: mrz[0] === 'P' ? 'passport' : 'id_card',
     dataGroups: [
       {
         groupNumber: 1,

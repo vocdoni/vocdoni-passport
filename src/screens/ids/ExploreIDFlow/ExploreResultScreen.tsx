@@ -38,7 +38,6 @@ interface ParsedData {
     optionalData1?: string;
     optionalData2?: string;
   };
-  photo?: string;
   signature?: string;
   dg1Raw: string;
   dg2Raw?: string;
@@ -142,31 +141,6 @@ function formatDate(yymmdd: string): string {
   const yy = parseInt(yymmdd.slice(0, 2), 10);
   const year = yy >= 50 ? 1900 + yy : 2000 + yy;
   return `${year}-${yymmdd.slice(2, 4)}-${yymmdd.slice(4, 6)}`;
-}
-
-function extractPhotoFromDG2(dg2Base64?: string): string | undefined {
-  if (!dg2Base64) {return undefined;}
-  try {
-    const dg2 = Buffer.from(dg2Base64, 'base64');
-    const jpegStart = findSequence(dg2, [0xff, 0xd8, 0xff]);
-    const jp2Start = findSequence(dg2, [0x00, 0x00, 0x00, 0x0c, 0x6a, 0x50]);
-
-    if (jpegStart >= 0) {
-      const jpegEnd = findSequence(dg2, [0xff, 0xd9], jpegStart);
-      if (jpegEnd >= 0) {
-        return dg2.slice(jpegStart, jpegEnd + 2).toString('base64');
-      }
-      return dg2.slice(jpegStart).toString('base64');
-    }
-
-    if (jp2Start >= 0) {
-      return dg2.slice(jp2Start).toString('base64');
-    }
-
-    return undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function findSequence(buffer: Buffer, sequence: number[], startFrom = 0): number {
@@ -464,12 +438,11 @@ export function ExploreResultScreen() {
   const { dg1, sod, dg2, dg7, dg11, dg12, dg13, dg14, dg15 } = route.params;
 
   const [parsed, setParsed] = useState<ParsedData | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mrz', 'photo']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mrz']));
 
   useEffect(() => {
     const mrz = extractMrzFromDG1(dg1);
     const mrzFields = parseMrz(mrz);
-    const photo = extractPhotoFromDG2(dg2);
     const signature = extractImageFromDG7(dg7);
     const sodInfo = parseSOD(sod);
     const dg11Parsed = parseDG11(dg11);
@@ -478,7 +451,6 @@ export function ExploreResultScreen() {
     setParsed({
       mrz,
       mrzFields,
-      photo,
       signature,
       dg1Raw: dg1,
       dg2Raw: dg2,
@@ -492,7 +464,7 @@ export function ExploreResultScreen() {
       dg12Parsed,
       sodInfo,
     });
-  }, [dg1, sod, dg2, dg7, dg11, dg12, dg13, dg14, dg15]);
+  }, [dg1, sod, dg2, dg7, dg11, dg12, dg13, dg14, dg15]); // dg2 kept for raw data display
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -556,29 +528,6 @@ export function ExploreResultScreen() {
             Green = present, Gray = not found or not accessible
           </Text>
         </View>
-
-        {/* Photo Section */}
-        {parsed.photo && (
-          <CollapsibleSection
-            title="📷 Photo"
-            expanded={expandedSections.has('photo')}
-            onToggle={() => toggleSection('photo')}
-          >
-            <View style={styles.photoContainer}>
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${parsed.photo}` }}
-                style={styles.photo}
-                resizeMode="contain"
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => copyToClipboard('Photo (Base64)', parsed.photo!)}
-            >
-              <Text style={styles.copyButtonText}>Copy Base64</Text>
-            </TouchableOpacity>
-          </CollapsibleSection>
-        )}
 
         {/* MRZ Section */}
         <CollapsibleSection
@@ -960,12 +909,12 @@ const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff8e6',
+    backgroundColor: colors.warningLight,
     padding: 12,
     borderRadius: borderRadius.md,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ffe0a0',
+    borderColor: colors.warningBorder,
   },
   warningIcon: {
     fontSize: 16,
@@ -974,7 +923,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: '#8a6d00',
+    color: colors.warningDark,
   },
   photoContainer: {
     alignItems: 'center',
@@ -1005,10 +954,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   mrzBox: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.surfaceDark,
     padding: 12,
     borderRadius: borderRadius.md,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   mrzText: {
     fontFamily: 'monospace',

@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   requirementsBox: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 20,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   ineligibleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.errorLight,
     borderRadius: borderRadius.md,
     padding: 14,
     marginBottom: 8,
@@ -377,12 +377,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fef5f5',
+    backgroundColor: colors.errorLight,
     borderRadius: borderRadius.sm,
     padding: 10,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: '#fdd',
+    borderColor: colors.errorBorder,
   },
   ineligibleNameSmall: {
     fontSize: 13,

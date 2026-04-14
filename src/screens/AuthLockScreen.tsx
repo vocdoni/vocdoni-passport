@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { Button } from '../components/common';
 import { colors, commonStyles, borderRadius } from '../components/common/styles';
 
-const APP_LOGO = require('../../assets/logo.png');
+const APP_LOGO = require('../../assets/vocdoni_passport_dark.png');
 
 interface AuthLockScreenProps {
   onUnlock: () => void;
@@ -14,9 +14,7 @@ export function AuthLockScreen({ onUnlock, biometricsAvailable }: AuthLockScreen
   return (
     <View style={[commonStyles.safeArea, styles.container]}>
       <View style={styles.content}>
-        <View style={styles.logoBadge}>
-          <Image source={APP_LOGO} style={styles.logoImage} resizeMode="contain" />
-        </View>
+        <Image source={APP_LOGO} style={styles.logoImage} resizeMode="contain" />
 
         <View style={styles.lockIcon}>
           <Text style={styles.lockEmoji}>🔒</Text>
@@ -43,27 +41,16 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
-  logoBadge: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
   logoImage: {
-    width: 120,
-    height: 48,
+    width: 180,
+    height: 56,
+    marginBottom: 40,
   },
   lockIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,

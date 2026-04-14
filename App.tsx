@@ -4,7 +4,7 @@ import 'text-encoding-polyfill';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { StatusBar, View, StyleSheet, BackHandler, Platform, Alert, Linking, ToastAndroid } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Buffer } from 'buffer';
@@ -160,7 +160,7 @@ function AppContent() {
   if (!bootReady) {
     return (
       <>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <BootScreen onReady={handleBootComplete} />
       </>
     );
@@ -169,7 +169,7 @@ function AppContent() {
   if (status === 'checking' || walletStatus === 'checking') {
     return (
       <>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <View style={styles.loading} />
       </>
     );
@@ -178,7 +178,7 @@ function AppContent() {
   if (status === 'locked') {
     return (
       <>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <AuthLockScreen onUnlock={handleUnlock} biometricsAvailable={biometricsAvailable} />
       </>
     );
@@ -188,8 +188,8 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <NavigationContainer ref={rootNavigationRef} onReady={() => setNavigationReady(true)}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <NavigationContainer ref={rootNavigationRef} theme={DarkTheme} onReady={() => setNavigationReady(true)}>
         <RootNavigator needsWalletSetup={needsWalletSetup} />
       </NavigationContainer>
     </>

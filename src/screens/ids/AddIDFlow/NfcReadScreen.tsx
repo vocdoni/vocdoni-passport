@@ -141,7 +141,7 @@ export function NfcReadScreen() {
 
       setStatus('Processing document data...');
       setProgress(100);
-      const newId = await addID(result.dg1, result.sod, result.dg2);
+      const newId = await addID(result.dg1, result.sod);
 
       await setupAuth();
       await refreshAuthState();
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.infoLight,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -417,17 +417,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryBadge: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
     alignSelf: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
   },
   retryText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#856404',
+    color: colors.warningDark,
   },
   errorText: {
     fontSize: 14,
@@ -438,15 +440,15 @@ const styles = StyleSheet.create({
   tips: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: colors.infoLight,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: colors.infoBorder,
   },
   tipsTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0369a1',
+    color: colors.primary,
     marginBottom: 12,
   },
   tipRow: {
@@ -462,7 +464,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 13,
-    color: '#0c4a6e',
+    color: colors.textSecondary,
     flex: 1,
   },
   chipLocations: {

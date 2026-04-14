@@ -125,10 +125,12 @@ export function AboutScreen() {
 
 const styles = StyleSheet.create({
   heroCard: {
-    backgroundColor: '#13213f',
+    backgroundColor: '#0d1730',
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   heroKicker: {
     color: '#c7d8ff',

@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   wordPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surfaceDark,
     borderRadius: borderRadius.md,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   actionButtonRevealed: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
   },
   actionButtonCopied: {
     backgroundColor: colors.success,

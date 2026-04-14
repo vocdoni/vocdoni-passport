@@ -8,7 +8,7 @@ import { colors, commonStyles, borderRadius } from '../../components/common/styl
 import { useWallet } from '../../contexts/WalletContext';
 import type { RootStackParamList } from '../../navigation/types';
 
-const APP_LOGO = require('../../../assets/logo.png');
+const APP_LOGO = require('../../../assets/vocdoni_passport_dark.png');
 
 type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -110,14 +110,10 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignSelf: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     marginBottom: 24,
   },
   logo: {
-    width: 120,
+    width: 180,
     height: 48,
   },
   successIcon: {

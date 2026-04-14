@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f0f5ff',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addressContainer: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceDark,
     padding: 14,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
@@ -277,10 +277,12 @@ const styles = StyleSheet.create({
   },
   copyBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   copyBadgeCopied: {
     backgroundColor: colors.successLight,
@@ -358,7 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#b6e2c6',
+    borderColor: colors.successBorder,
   },
   securityIcon: {
     fontSize: 18,
