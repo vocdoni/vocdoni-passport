@@ -172,9 +172,10 @@ android {
         resources {
             excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
-        // Strip debug symbols from native libraries to reduce size
         jniLibs {
-            useLegacyPackaging = false  // Compress native libs in APK
+            // false = store .so files uncompressed; AGP 8.5.1+ zip-aligns them at 16 KB
+            // (required for Google Play 16 KB page size compatibility)
+            useLegacyPackaging = false
         }
     }
     

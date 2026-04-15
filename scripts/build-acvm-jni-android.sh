@@ -40,8 +40,11 @@ export AR_x86_64_linux_android="$TOOLCHAIN/bin/llvm-ar"
 export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$CC_x86_64_linux_android"
 
 cd "$CRATE"
-cargo build --release --target aarch64-linux-android
-cargo build --release --target x86_64-linux-android
+# -z max-page-size=16384: 16 KB page size support (required for Google Play targeting Android 15+)
+RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-Wl,-z,max-page-size=16384" \
+    cargo build --release --target aarch64-linux-android
+RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-Wl,-z,max-page-size=16384" \
+    cargo build --release --target x86_64-linux-android
 
 JNI_DIR="$APP_ROOT/android/app/src/main/jniLibs"
 mkdir -p "$JNI_DIR/arm64-v8a" "$JNI_DIR/x86_64"

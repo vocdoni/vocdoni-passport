@@ -60,3 +60,7 @@ target_link_libraries(barretenberg_jni
     -Wl,--end-group
     log  # Android logging
 )
+
+# 16 KB page size support (required for Google Play targeting Android 15+)
+# NDK r27 does not enable this by default; r28+ does.
+target_link_options(barretenberg_jni PRIVATE "-Wl,-z,max-page-size=16384")
