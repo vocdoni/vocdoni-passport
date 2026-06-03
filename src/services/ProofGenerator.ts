@@ -46,7 +46,8 @@ import {
 } from './RegistryCache';
 
 const CHAIN_ID = 11155111;
-const CIRCUIT_VERSION = '0.16.0';
+// chainId 11155111 selects the zkPassport "testnet" endpoints in @zkpassport/registry >=0.14.
+const CIRCUIT_VERSION = '0.18.0';
 const TIMING_TAG = '[ProofTiming]';
 
 type ProgressFn = (step: string, detail: string) => void;
