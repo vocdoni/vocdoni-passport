@@ -37,7 +37,8 @@ static std::set<size_t> FREED_GATES; // hack to prevent instrumentation failures
 
 #define pad(size, alignment) (size - (size % alignment) + ((size % alignment) == 0 ? 0 : alignment))
 
-#ifdef __APPLE__
+// Apple and Android use posix_memalign (Android's aligned_alloc requires API 28+)
+#if defined(__APPLE__) || defined(__ANDROID__)
 inline void* aligned_alloc(size_t alignment, size_t size)
 {
     void* t = 0;
@@ -57,36 +58,8 @@ inline void aligned_free(void* mem)
 }
 #endif
 
-#if defined(__ANDROID__)
-// Android bionic doesn't provide aligned_alloc until API 28.
-// Use posix_memalign which is available on all API levels.
-// The android_compat.hpp header handles this via force-include.
-#include "barretenberg/common/android_compat.hpp"
-inline void* protected_aligned_alloc(size_t alignment, size_t size)
-{
-    // pad size to alignment
-    if (size % alignment != 0) {
-        size += alignment - (size % alignment);
-    }
-    void* t = nullptr;
-    if (posix_memalign(&t, alignment, size) != 0 || t == nullptr) {
-        info("bad alloc of size: ", size);
-        std::abort();
-    }
-    TRACY_ALLOC(t, size);
-    return t;
-}
-
-// Override aligned_alloc macro from android_compat.hpp with our tracked version
-#undef aligned_alloc
-#define aligned_alloc protected_aligned_alloc
-
-inline void aligned_free(void* mem)
-{
-    TRACY_FREE(mem);
-    free(mem);
-}
-#elif defined(__linux__) || defined(__wasm__)
+// Linux (but not Android) and WASM use the standard aligned_alloc
+#if (defined(__linux__) && !defined(__ANDROID__)) || defined(__wasm__)
 inline void* protected_aligned_alloc(size_t alignment, size_t size)
 {
     size += (size % alignment);

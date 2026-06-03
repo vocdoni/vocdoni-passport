@@ -15,6 +15,21 @@ const config = {
       if (aliases[moduleName]) {
         return { filePath: aliases[moduleName], type: 'sourceFile' };
       }
+      // @peculiar/utils (pulled in by the newer @peculiar/asn1-* packages that
+      // @zkpassport/utils 0.36 depends on) exposes its submodules only through the
+      // package "exports" map (./bytes, ./converters, ./encoding, ./legacy, ./pem).
+      // This Metro version does not resolve subpath exports, so map them explicitly to
+      // the cjs build — matching the manual-alias approach used above.
+      const peculiarUtils = moduleName.match(/^@peculiar\/utils\/([a-z]+)$/);
+      if (peculiarUtils) {
+        return {
+          filePath: path.resolve(
+            __dirname,
+            `node_modules/@peculiar/utils/build/cjs/${peculiarUtils[1]}/index.js`,
+          ),
+          type: 'sourceFile',
+        };
+      }
       return context.resolveRequest(context, moduleName, platform);
     },
   },

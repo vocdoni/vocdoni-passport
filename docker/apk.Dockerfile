@@ -15,7 +15,7 @@
 #   docker rm extract
 #
 # Build arguments:
-#   AZTEC_PACKAGES_REF  - Git commit of zkPassport's Aztec fork (default: pinned)
+#   AZTEC_PACKAGES_REF  - Git commit of AztecProtocol/aztec-packages (default: pinned bb 4.2)
 #   GRADLE_TASK         - Gradle task to run (default: assembleRelease)
 #   GRADLE_EXTRA_ARGS   - Additional Gradle arguments
 #
@@ -29,7 +29,7 @@
 FROM reactnativecommunity/react-native-android:latest
 
 # Build arguments
-ARG AZTEC_PACKAGES_REF=a4f7c39e15e7835c1f5f491168afa4aaac286894
+ARG AZTEC_PACKAGES_REF=a4701a61d886039b6b4e16ab9af3e06f331e2fc9
 ARG GRADLE_TASK=assembleRelease
 ARG GRADLE_TASKS=
 ARG GRADLE_EXTRA_ARGS=
@@ -78,8 +78,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /tmp/bb
 
-# Clone zkPassport's Aztec fork
-RUN git clone --depth 1 https://github.com/zkpassport/aztec-packages /tmp/aztec-packages && \
+# Clone AztecProtocol aztec-packages at bb 4.2 commit
+RUN git clone --depth 1 https://github.com/AztecProtocol/aztec-packages /tmp/aztec-packages && \
     cd /tmp/aztec-packages && \
     git fetch --depth 1 origin ${AZTEC_PACKAGES_REF} && \
     git checkout ${AZTEC_PACKAGES_REF}
@@ -93,15 +93,8 @@ RUN cp /tmp/aztec-packages/barretenberg/cpp/CMakeLists.txt ./ && \
 # Apply Android-specific patches
 COPY docker/barretenberg-android-overlay/ /tmp/bb/
 
-# Fix LMDB build for Android
-RUN perl -0pi -e 's{BUILD_COMMAND make -C libraries/liblmdb -e XCFLAGS=-fPIC liblmdb\\.a}{BUILD_COMMAND sh -lc "make -C libraries/liblmdb -e XCFLAGS=-fPIC liblmdb.a || true"}g' \
-    /tmp/bb/cmake/lmdb.cmake
-
-# Fix memory allocation for Android
-RUN sed -i '/barretenberg\/common\/net.hpp/a #include "barretenberg/common/mem.hpp"' \
-        /tmp/bb/src/barretenberg/common/serialize.hpp && \
-    sed -i 's|reinterpret_cast<uint8_t\\*>(aligned_alloc(64, heap_buf_size_aligned))|reinterpret_cast<uint8_t*>(bb::aligned_alloc(64, heap_buf_size_aligned))|g' \
-        /tmp/bb/src/barretenberg/common/serialize.hpp
+# bb 4.2: MOBILE=ON excludes lmdb/world_state; no serialize.hpp patches needed
+# (serialize.hpp already includes mem.hpp; mem.hpp handles Android posix_memalign natively)
 
 # Build for ARM64
 RUN cmake -B build-android-arm64 -G Ninja \
@@ -109,7 +102,7 @@ RUN cmake -B build-android-arm64 -G Ninja \
         -DANDROID_ABI=arm64-v8a \
         -DANDROID_PLATFORM=android-26 \
         -DCMAKE_BUILD_TYPE=Release \
-        -DDISABLE_AZTEC_VM=ON \
+        -DMOBILE=ON \
         -DMULTITHREADING=ON && \
     ninja -C build-android-arm64 barretenberg env libdeflate_static
 
@@ -119,7 +112,7 @@ RUN cmake -B build-android-x86_64 -G Ninja \
         -DANDROID_ABI=x86_64 \
         -DANDROID_PLATFORM=android-26 \
         -DCMAKE_BUILD_TYPE=Release \
-        -DDISABLE_AZTEC_VM=ON \
+        -DMOBILE=ON \
         -DMULTITHREADING=ON && \
     ninja -C build-android-x86_64 barretenberg env libdeflate_static
 
@@ -136,7 +129,7 @@ RUN cd /tmp/jni && \
         --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
         -shared -fPIC -O2 -std=c++20 \
         -fconstexpr-steps=100000000 -fbracket-depth=1024 \
-        -DANDROID -DDISABLE_ASM=1 -DDISABLE_AZTEC_VM=1 -DNO_PAR_ALGOS \
+        -DANDROID -DNO_PAR_ALGOS \
         -I/tmp/bb/src \
         -I/tmp/bb/build-android-arm64/_deps/msgpack-c/src/msgpack-c/include \
         -I/tmp/bb/build-android-arm64/_deps/tracy-src/public \
@@ -157,7 +150,7 @@ RUN cd /tmp/jni && \
         --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
         -shared -fPIC -O2 -std=c++20 \
         -fconstexpr-steps=100000000 -fbracket-depth=1024 \
-        -DANDROID -DDISABLE_AZTEC_VM=1 -DNO_PAR_ALGOS \
+        -DANDROID -DNO_PAR_ALGOS \
         -I/tmp/bb/src \
         -I/tmp/bb/build-android-x86_64/_deps/msgpack-c/src/msgpack-c/include \
         -I/tmp/bb/build-android-x86_64/_deps/tracy-src/public \

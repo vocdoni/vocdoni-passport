@@ -57,7 +57,8 @@ void configure_runtime_profile(uint64_t total_mem_bytes, int cpu_count)
     setenv("BB_SLOW_LOW_MEMORY", slow_low_memory ? "1" : "0", 1);
     setenv("BB_STORAGE_BUDGET", storage_budget_str, 1);
     storage_budget = parse_size_string(storage_budget_str);
-    set_slow_low_memory(slow_low_memory);
+    // bb 4.2: slow_low_memory is a plain extern bool (no setter function)
+    ::slow_low_memory = slow_low_memory;
 
     LOGI("Configured barretenberg runtime: profile=%s total_mem_mib=%llu cpu_count=%d threads=%d slow=%d storage_budget=%s parsed_budget=%zu",
          profile,
