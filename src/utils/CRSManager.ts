@@ -1,5 +1,4 @@
 /* eslint-disable no-bitwise -- CRS size alignment uses power-of-two bit shifts */
-import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
 
 const CRS_BASE_URL = 'https://crs.aztec.network';
@@ -77,14 +76,32 @@ async function probeRemoteFile(url: string, onP: ProgressFn, label: string): Pro
   }
 }
 
-async function appendTmpChunk(tmp: string, dest: string, append: boolean) {
-  const tmpData = await RNFS.readFile(tmp, 'base64');
-  const chunk = Buffer.from(tmpData, 'base64');
-  if (append) {
-    await RNFS.appendFile(dest, chunk.toString('base64'), 'base64');
-  } else {
-    await RNFS.writeFile(dest, chunk.toString('base64'), 'base64');
+// Stream chunk size for merging CRS parts. The CRS files are large (bn254 g1 is
+// ~256 MiB); reading one whole into a JS base64 string + Buffer overflows the
+// Hermes heap (512 MiB growth limit) and OOMs on real devices. Merge natively
+// instead, bounding any JS allocation to this chunk.
+const CRS_MERGE_CHUNK = 8 * 1024 * 1024; // 8 MiB
+
+// Merge a freshly downloaded range part (`tmp`) into `dest` WITHOUT ever holding
+// the whole file in the JS heap:
+//   - fresh download (append=false): native rename, zero JS memory;
+//   - resume (append=true): stream `tmp` onto `dest` in bounded chunks.
+// Consumes `tmp` in both cases.
+async function mergeTmpIntoDest(tmp: string, dest: string, append: boolean) {
+  if (!append) {
+    if (await RNFS.exists(dest)) {await RNFS.unlink(dest);}
+    await RNFS.moveFile(tmp, dest);
+    return;
   }
+  const total = await fileSize(tmp);
+  let pos = 0;
+  while (pos < total) {
+    const len = Math.min(CRS_MERGE_CHUNK, total - pos);
+    const b64 = await RNFS.read(tmp, len, pos, 'base64');
+    await RNFS.appendFile(dest, b64, 'base64');
+    pos += len;
+  }
+  if (await RNFS.exists(tmp)) {await RNFS.unlink(tmp);}
 }
 
 async function downloadWhole(url: string, dest: string, onP: ProgressFn, label: string, minBytes?: number) {
@@ -205,8 +222,7 @@ async function downloadRangeOrWhole(url: string, dest: string, bytesNeeded: numb
   }
 
   const append = from > 0 && res.statusCode === 206;
-  await appendTmpChunk(tmp, dest, append);
-  await RNFS.unlink(tmp);
+  await mergeTmpIntoDest(tmp, dest, append);
 
   const finalSize = await fileSize(dest);
   if (finalSize < effectiveNeed) {
