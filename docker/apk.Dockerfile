@@ -140,6 +140,7 @@ RUN cd /tmp/jni && \
         /tmp/bb/build-android-arm64/lib/libenv.a \
         /tmp/bb/build-android-arm64/_deps/libdeflate-build/libdeflate.a \
         -Wl,--end-group \
+        -Wl,-z,max-page-size=16384 \
         -llog -lc++ \
         -o /tmp/jni/libbarretenberg_jni_arm64.so
 
@@ -161,6 +162,7 @@ RUN cd /tmp/jni && \
         /tmp/bb/build-android-x86_64/lib/libenv.a \
         /tmp/bb/build-android-x86_64/_deps/libdeflate-build/libdeflate.a \
         -Wl,--end-group \
+        -Wl,-z,max-page-size=16384 \
         -llog -lc++ \
         -o /tmp/jni/libbarretenberg_jni_x86_64.so
 
@@ -178,6 +180,7 @@ RUN cd /tmp/vocdoni-passport-prover && \
     export CC_x86_64_linux_android=$TOOLCHAIN/bin/x86_64-linux-android26-clang && \
     export AR_x86_64_linux_android=$TOOLCHAIN/bin/llvm-ar && \
     export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$CC_x86_64_linux_android && \
+    export RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-Wl,-z,max-page-size=16384" && \
     cargo build --release -p acvm-witness-jni --target aarch64-linux-android && \
     cargo build --release -p acvm-witness-jni --target x86_64-linux-android
 
