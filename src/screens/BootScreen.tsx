@@ -10,7 +10,8 @@ interface BootScreenProps {
 }
 
 export function BootScreen({ onReady }: BootScreenProps) {
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  // Background warm-up means the splash is brief; status stays 'loading' until the app reveals.
+  const [status] = useState<'loading' | 'ready' | 'error'>('loading');
   const [statusText, setStatusText] = useState('Initializing...');
 
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -24,8 +25,6 @@ export function BootScreen({ onReady }: BootScreenProps) {
   const ring2Scale = useRef(new Animated.Value(0.8)).current;
   const ring2Opacity = useRef(new Animated.Value(0.4)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
-  const buttonOpacity = useRef(new Animated.Value(0)).current;
-  const buttonTranslate = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -166,84 +165,40 @@ export function BootScreen({ onReady }: BootScreenProps) {
       }).start();
     };
 
+    // Warm proving assets (manifest, certs, baseline circuits, CRS) in the
+    // BACKGROUND. This used to block the entire app for ~25-30s, but it is only
+    // needed at sign time and the sign flow re-ensures anything missing. Running
+    // it off the boot critical path makes the app usable in ~1s instead of ~30s,
+    // and a flaky network (e.g. a stalled on-chain cert-root call) no longer
+    // freezes boot — only signing would wait.
     preloadCoreProofAssets((step, detail) => {
       if (cancelled) {return;}
-      progress += 15;
-      if (progress > 90) {progress = 90;}
+      progress = Math.min(progress + 15, 90);
       updateProgress(progress);
-
-      if (detail.toLowerCase().includes('manifest')) {
+      const d = detail.toLowerCase();
+      if (d.includes('manifest')) {
         setStatusText('Loading circuits...');
-      } else if (detail.toLowerCase().includes('certificate')) {
+      } else if (d.includes('certificate')) {
         setStatusText('Verifying certificates...');
-      } else if (detail.toLowerCase().includes('circuit') || detail.toLowerCase().includes('cached')) {
+      } else if (d.includes('circuit') || d.includes('cached')) {
         setStatusText('Preparing proofs...');
-      } else if (detail.toLowerCase().includes('crs')) {
+      } else if (d.includes('crs')) {
         setStatusText('Almost ready...');
       }
-    })
-      .then(() => {
-        if (cancelled) {return;}
-        setStatus('ready');
-        setStatusText('Ready!');
-        updateProgress(100);
+    }).catch(() => {
+      // Warm-up failed (e.g. offline); the sign flow retries on demand. Don't block boot.
+    });
 
-        Animated.spring(checkScale, {
-          toValue: 1,
-          tension: 50,
-          friction: 6,
-          useNativeDriver: true,
-        }).start();
-
-        setTimeout(() => {
-          if (cancelled) {return;}
-          Animated.parallel([
-            Animated.timing(buttonOpacity, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-            Animated.timing(buttonTranslate, {
-              toValue: 0,
-              duration: 400,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }, 300);
-
-        setTimeout(() => {
-          if (!cancelled) {onReady();}
-        }, 1200);
-      })
-      .catch((_err: unknown) => {
-        if (cancelled) {return;}
-        setStatus('error');
-        setStatusText('Ready to continue');
-        updateProgress(100);
-
-        Animated.parallel([
-          Animated.timing(buttonOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonTranslate, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        setTimeout(() => {
-          if (!cancelled) {onReady();}
-        }, 1500);
-      });
+    // Reveal the app after a short branded splash, regardless of warm-up progress.
+    const readyTimer = setTimeout(() => {
+      if (!cancelled) {onReady();}
+    }, 900);
 
     return () => {
       cancelled = true;
+      clearTimeout(readyTimer);
     };
-  }, [onReady, progressWidth, checkScale, buttonOpacity, buttonTranslate]);
+  }, [onReady, progressWidth]);
 
   const progressInterpolate = progressWidth.interpolate({
     inputRange: [0, 100],
