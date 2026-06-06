@@ -40,6 +40,10 @@ ARG ANDROID_NATIVE_DEBUG_SYMBOL_LEVEL=SYMBOL_TABLE
 ARG ANDROID_UPLOAD_STORE_TYPE=JKS
 ARG APP_BUILD_GIT_REF=
 ARG APP_BUILD_GIT_REF_KIND=commit
+# Bundle the inner-circuit CRS into the APK (opt-in; ~50 MiB). Default off.
+ARG BUNDLE_INNER_CRS=false
+ARG CRS_BUNDLE_LOG2=19
+ARG CRS_BASE_URL=https://crs.aztec.network
 
 # =============================================================================
 # System Dependencies
@@ -238,6 +242,23 @@ RUN mkdir -p android/app/src/main/jniLibs/arm64-v8a && \
 RUN echo "=== Native library sizes ===" && \
     ls -lh android/app/src/main/jniLibs/arm64-v8a/ && \
     ls -lh android/app/src/main/jniLibs/x86_64/
+
+# Optionally bundle the inner-circuit CRS into the APK so a fresh install needs
+# no runtime download (CRSManager.seedFromBundledAssets copies it on first run).
+# Opt-in (adds ~50 MiB to the APK). The device only proves inner circuits
+# (<=2^CRS_BUNDLE_LOG2); larger ones extend the prefix via the normal download.
+RUN if [ "${BUNDLE_INNER_CRS}" = "true" ]; then \
+      set -e; \
+      AD=android/app/src/main/assets/bb-crs; mkdir -p "$AD"; \
+      g1pts=$(( (1 << CRS_BUNDLE_LOG2) + 1 )); g1end=$(( g1pts*64 - 1 )); \
+      gklog=${CRS_BUNDLE_LOG2}; [ "$gklog" -gt 18 ] && gklog=18; \
+      gkend=$(( ((1 << gklog) + 1)*64 - 1 )); \
+      echo "Bundling inner CRS: g1 0-$g1end, grumpkin 0-$gkend"; \
+      curl -fsS -r 0-$g1end "${CRS_BASE_URL}/g1.dat"          -o "$AD/bn254_g1.dat"; \
+      curl -fsS              "${CRS_BASE_URL}/g2.dat"          -o "$AD/bn254_g2.dat"; \
+      curl -fsS -r 0-$gkend  "${CRS_BASE_URL}/grumpkin_g1.dat" -o "$AD/grumpkin_g1.flat.dat"; \
+      ls -lh "$AD"; \
+    else echo "BUNDLE_INNER_CRS != true; CRS will download on first run"; fi
 
 # Build the app
 WORKDIR /app/VocdoniPassport/android

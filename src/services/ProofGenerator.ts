@@ -26,7 +26,7 @@ import {
   getTBSMaxLen,
   getNumberOfPublicInputsFromVkey,
   ultraVkToFields,
-  getCircuitMerkleProof,
+  getCertificateLeafHashes,
   type Query,
   type BoundData,
 } from '@zkpassport/utils';
@@ -36,6 +36,8 @@ import { circuitProve, isAvailable, setBbCrsPath } from '../native/Barretenberg'
 import { isAcvmWitnessAvailable, solveCompressedWitness } from '../native/AcvmWitness';
 import { assertDisclosureCommInMatchesIntegrityOut } from './proofCommitmentAssertions';
 import { ensureCrsFilesForCircuits } from '../utils/CRSManager';
+import { circuitMerkleProof } from '../utils/circuitMerkle';
+import { loadBaseProofs, saveBaseProofs } from '../storage/baseProofStore';
 import {
   readCachedCertificates,
   readCachedManifest,
@@ -90,7 +92,9 @@ const STARTUP_BASELINE_CIRCUITS = [
 
 type PreparedCircuitArtifact = {
   packaged: any;
-  bytecode: Uint8Array;
+  // NOTE: the decompressed program bytecode is intentionally NOT cached here.
+  // It is ~17 MiB per circuit; caching it for every circuit blew up the JS heap.
+  // We decompress on demand right before proving and release it (see proveRawCircuit).
   vkey: Uint8Array;
   vkeyFields: string[];
   expectedPublicInputs: number;
@@ -101,6 +105,30 @@ const sessionCertificatesCache = new Map<string, any>();
 const sessionPackagedCircuitCache = new Map<string, any>();
 const sessionPreparedCircuitCache = new Map<string, PreparedCircuitArtifact>();
 const sessionMerkleProofCache = new Map<string, { path: string[]; index: number }>();
+// Re-sign cache for the DSC certificate Merkle inputs. getDSCCircuitInputs rebuilds
+// the height-16 cert tree (poseidon2 over all CSCAs) every call; on re-signs of the
+// same passport we feed back the exact override the SDK itself produced, so the
+// values are correct by construction. Keyed by certRoot:cscaFingerprint.
+const sessionCertLeavesCache = new Map<string, bigint[]>();
+const sessionDscCertProofCache = new Map<string, { root: string; index: number; path: string[] }>();
+
+// Base-proof cache (T3 #1). The DSC / ID-data / integrity proofs verify facts
+// about the passport (cert chain, SOD signature, data integrity) and are
+// petition-AGNOSTIC — only the disclosure proofs depend on the request. So prove
+// them once per passport and reuse them across petitions in the same session,
+// reusing the salts so the disclosure comm_in still matches integrity comm_out.
+// (The disclosure proof is always regenerated, so per-petition semantics and the
+// per-sign currentDate are unchanged. This mirrors zkPassport's cached "base
+// proofs".) Keyed by passport + manifest version + cert root + circuit names.
+type SaltsOut = { dg1Salt: bigint; expiryDateSalt: bigint; dg2HashSalt: bigint; privateNullifierSalt: bigint };
+type CachedBaseProofs = {
+  saltDscIn: bigint;
+  saltsOut: SaltsOut;
+  dsc: OuterCircuitProof & { circuitName: string };
+  idData: OuterCircuitProof & { circuitName: string };
+  integrity: OuterCircuitProof & { circuitName: string };
+};
+const baseProofCache = new Map<string, CachedBaseProofs>();
 
 // Extended query type that includes optional_data fields not in the standard zkPassport SDK
 export interface ExtendedQuery extends Query {
@@ -198,35 +226,55 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   const disclosurePlans = buildDisclosurePlans(normalizedQuery, walletAddress);
   const disclosureCount = disclosurePlans.length;
   const outerName = `outer_evm_count_${3 + disclosureCount}`;
-  const { dscName, idDataName, integrityName, debug } = await deriveCircuitNames(passport, packagedCerts, manifest, outerName);
-  const circuitNames = [dscName, idDataName, integrityName, ...disclosurePlans.map((p) => p.circuitName), outerName];
+  const { dscName, idDataName, integrityName, csca, debug } = await deriveCircuitNames(passport, packagedCerts, manifest, outerName);
+  // The outer circuit (outer_evm_count_N, 2^22) is proven server-side, never on
+  // device. Only validate it exists in the manifest; do NOT prepare its bytecode
+  // or size the CRS to it (that forced a ~256 MiB download + decode for nothing).
+  const deviceCircuitNames = [dscName, idDataName, integrityName, ...disclosurePlans.map((p) => p.circuitName)];
+  const circuitNames = [...deviceCircuitNames, outerName];
   for (const name of circuitNames) {
     if (!manifest?.circuits?.[name]) {throw new Error(`Required circuit not found in manifest: ${name}`);}
   }
   onP('circuits', `DSC: ${debug.dsc}`);
   onP('circuits', `ID : ${debug.id}`);
   onP('circuits', `Disclosure plans: ${disclosurePlans.map((p) => p.circuitName).join(', ')}`);
-  onP('circuits', `Circuits: ${circuitNames.join(', ')}`);
+  onP('circuits', `Device circuits: ${deviceCircuitNames.join(', ')} (outer ${outerName} -> server)`);
 
   onP('download', 'Warming circuit artifacts...');
   await timed(
     'circuits.prepare',
-    () => Promise.all(circuitNames.map((name) => ensurePreparedCircuit(registry, manifest, name))).then(() => undefined),
-    circuitNames.join(','),
+    () => Promise.all(deviceCircuitNames.map((name) => ensurePreparedCircuit(registry, manifest, name))).then(() => undefined),
+    deviceCircuitNames.join(','),
   );
 
+  // CRS sized to the device-proven (inner) circuits only — largest is RSA-4096
+  // DSC (~2^19 -> ~32 MiB g1), not the 2^22 outer.
   onP('download', 'Preparing CRS from manifest sizes...');
   const crsDir = await timed(
     'crs.ensure',
-    () => ensureCrsFilesForCircuits(circuitNames.map((name) => Number(manifest.circuits?.[name]?.size || 0)), onP),
-    `${circuitNames.length} circuits`,
+    () => ensureCrsFilesForCircuits(deviceCircuitNames.map((name) => Number(manifest.circuits?.[name]?.size || 0)), onP),
+    `${deviceCircuitNames.length} circuits`,
   );
   setBbCrsPath(crsDir);
 
-  const saltDscIn = randomBigInt();
+  // Base-proof cache key: passport-bound + manifest/cert/circuit-bound.
+  const idKey = Buffer.from(sha256(Buffer.concat([Buffer.from(pd.dg1, 'base64'), Buffer.from(pd.sod, 'base64')]))).toString('hex');
+  const baseKey = `${idKey}:${manifest.version}:${certRoot}:${dscName}:${idDataName}:${integrityName}`;
+  let cachedBase = baseProofCache.get(baseKey);
+  if (!cachedBase) {
+    // Cold start (fresh process): try the disk cache so a re-sign of this
+    // passport still skips base input-building + proving.
+    const fromDisk = await loadBaseProofs(idKey, baseKey);
+    if (fromDisk) {
+      cachedBase = fromDisk as CachedBaseProofs;
+      baseProofCache.set(baseKey, cachedBase);
+    }
+  }
+
+  const saltDscIn = cachedBase?.saltDscIn ?? randomBigInt();
   // Must remain stable with disclosure circuits; they don't accept saltIdOut, so use 0n.
   const saltIdOut = 0n;
-  const saltsOut = {
+  const saltsOut: SaltsOut = cachedBase?.saltsOut ?? {
     dg1Salt: randomBigInt(),
     expiryDateSalt: randomBigInt(),
     dg2HashSalt: randomBigInt(),
@@ -238,72 +286,111 @@ export async function generatePassportInnerProofPackage(pd: PassportData, onP: P
   const serviceSubscope = getServiceSubscopeHash('petition');
   const currentDateTimestamp = Math.floor(Date.now() / 1000);
 
-  onP('inputs', 'Deriving real zkPassport circuit inputs...');
-  const [dscInputs, idInputs, integrityInputs] = await timed(
-    'inputs.primary',
-    () => Promise.all([
-      getDSCCircuitInputs(passport as any, saltDscIn, packagedCerts as any),
-      getIDDataCircuitInputs(passport as any, saltDscIn, saltIdOut),
-      getIntegrityCheckCircuitInputs(passport as any, saltIdOut, saltsOut as any),
-    ]),
-    `${dscName},${idDataName},${integrityName}`,
-  );
+  // Build the base (DSC/ID/integrity) inputs only on a cache miss.
+  let dscInputs: any, idInputs: any, integrityInputs: any;
+  if (!cachedBase) {
+    // T2.6: feed back the SDK's own cert-tree proof on re-signs (correct by construction).
+    const cscaKey = `${certRoot}:${(csca as any)?.fingerprint || ''}`;
+    const cachedCertLeaves = sessionCertLeavesCache.get(certRoot);
+    const cachedCertProof = sessionDscCertProofCache.get(cscaKey);
 
-  if (!dscInputs) {throw new Error('Could not derive DSC inputs');}
-  if (!idInputs) {throw new Error('Could not derive ID data inputs');}
-  if (!integrityInputs) {throw new Error('Could not derive integrity inputs');}
+    onP('inputs', 'Deriving real zkPassport circuit inputs...');
+    [dscInputs, idInputs, integrityInputs] = await timed(
+      'inputs.primary',
+      () => Promise.all([
+        getDSCCircuitInputs(passport as any, saltDscIn, packagedCerts as any, cachedCertLeaves, cachedCertProof as any),
+        getIDDataCircuitInputs(passport as any, saltDscIn, saltIdOut),
+        getIntegrityCheckCircuitInputs(passport as any, saltIdOut, saltsOut as any),
+      ]),
+      `${dscName},${idDataName},${integrityName}`,
+    );
+    if (!dscInputs) {throw new Error('Could not derive DSC inputs');}
+    if (!idInputs) {throw new Error('Could not derive ID data inputs');}
+    if (!integrityInputs) {throw new Error('Could not derive integrity inputs');}
 
-  onP('prove', `[1/${3 + disclosureCount}] ${dscName}`);
-  const dscProof = await fetchAndProveInnerCircuit(registry, manifest, dscName, dscInputs, onP);
-  onP('prove', `  ✅ ${dscName}`);
+    if (!cachedCertProof) {
+      sessionDscCertProofCache.set(cscaKey, {
+        root: String((dscInputs as any).certificate_registry_root),
+        index: Number((dscInputs as any).certificate_tree_index),
+        path: (dscInputs as any).certificate_tree_hash_path as string[],
+      });
+      if (!cachedCertLeaves) {
+        getCertificateLeafHashes((packagedCerts as any).certificates, (packagedCerts as any).version)
+          .then((leaves) => sessionCertLeavesCache.set(certRoot, leaves))
+          .catch(() => {});
+      }
+    }
+  } else {
+    onP('prove', 'Reusing cached base proofs (DSC, ID-data, integrity)');
+  }
 
-  onP('prove', `[2/${3 + disclosureCount}] ${idDataName}`);
-  const idProof = await fetchAndProveInnerCircuit(registry, manifest, idDataName, idInputs, onP);
-  onP('prove', `  ✅ ${idDataName}`);
-
-  onP('prove', `[3/${3 + disclosureCount}] ${integrityName}`);
-  const integrityProof = await fetchAndProveInnerCircuit(registry, manifest, integrityName, integrityInputs, onP);
-  onP('prove', `  ✅ ${integrityName}`);
-
-  // comm_in must come from getDiscloseCircuitInputs (hashSaltDg1Dg2HashPrivateNullifier); the circuit
-  // asserts it matches witness salts. Overwriting it with integrity PI breaks ACVM (Failed assertion).
-  // Align passport.dataGroups with SOD eContent hashes + algorithm so that hash equals integrity out.
-
-  const disclosureProofs: Array<OuterCircuitProof & { circuitName: string }> = [];
-  for (let i = 0; i < disclosurePlans.length; i++) {
-    const plan = disclosurePlans[i];
-    const step = 4 + i;
+  // Disclosure inputs (always — petition-specific), using the (possibly cached) salts.
+  // comm_in comes from getDiscloseCircuitInputs and must match integrity comm_out;
+  // reusing the cached saltsOut keeps that invariant when base proofs are reused.
+  const disclosureInputsList: Record<string, any>[] = [];
+  for (const plan of disclosurePlans) {
     onP('inputs', `Preparing ${plan.circuitName}...`);
-    const disclosureInputs = await timed(
+    const di = await timed(
       `inputs.${plan.circuitName}`,
       () => plan.buildInputs(passport as any, saltsOut as any, nullifierSecret, serviceScope, serviceSubscope, currentDateTimestamp),
       plan.circuitName,
     );
-    if (!disclosureInputs) {
-      console.error(`[ProofGenerator] disclosureInputs is null/undefined for ${plan.circuitName}`);
+    if (!di) {
       console.error('[ProofGenerator] Query:', JSON.stringify(normalizedQuery, null, 2));
       throw new Error(`Could not derive inputs for ${plan.circuitName}`);
     }
-    onP('prove', `[${step}/${3 + disclosureCount}] ${plan.circuitName}`);
-    const proof = await fetchAndProveInnerCircuit(registry, manifest, plan.circuitName, disclosureInputs, onP);
+    disclosureInputsList.push(di);
+  }
+
+  // Pipeline: prove the base circuits only on a miss, then the disclosures (T2.8 overlap preserved).
+  const baseNames = cachedBase ? [] : [dscName, idDataName, integrityName];
+  const baseInputs = cachedBase ? [] : [dscInputs, idInputs, integrityInputs];
+  const allNames = [...baseNames, ...disclosurePlans.map((p) => p.circuitName)];
+  const allInputs = [...baseInputs, ...disclosureInputsList];
+  const preparedList = await Promise.all(allNames.map((n) => ensurePreparedCircuit(registry, manifest, n)));
+  const pipelineItems = allNames.map((name, i) => ({ name, inputs: allInputs[i], prepared: preparedList[i] }));
+  const proved = await proveInnerCircuitsPipelined(pipelineItems, manifest, onP);
+
+  let dscProof: OuterCircuitProof & { circuitName: string };
+  let idProof: OuterCircuitProof & { circuitName: string };
+  let integrityProof: OuterCircuitProof & { circuitName: string };
+  let disclosureStart: number;
+  if (cachedBase) {
+    dscProof = cachedBase.dsc;
+    idProof = cachedBase.idData;
+    integrityProof = cachedBase.integrity;
+    disclosureStart = 0;
+  } else {
+    dscProof = { circuitName: dscName, ...proved[0] };
+    idProof = { circuitName: idDataName, ...proved[1] };
+    integrityProof = { circuitName: integrityName, ...proved[2] };
+    disclosureStart = 3;
+    const baseEntry = { saltDscIn, saltsOut, dsc: dscProof, idData: idProof, integrity: integrityProof };
+    baseProofCache.set(baseKey, baseEntry);
+    // Persist so a future cold-start re-sign of this passport reuses them (best-effort).
+    saveBaseProofs(idKey, baseKey, baseEntry).catch(() => {});
+  }
+
+  const disclosureProofs: Array<OuterCircuitProof & { circuitName: string }> = [];
+  for (let i = 0; i < disclosurePlans.length; i++) {
+    const proof = proved[disclosureStart + i];
     assertDisclosureCommInMatchesIntegrityOut(
-      plan.circuitName,
+      disclosurePlans[i].circuitName,
       integrityProof.publicInputs,
       integrityProof.proof,
       proof.publicInputs,
       proof.proof,
     );
-    disclosureProofs.push({ circuitName: plan.circuitName, ...proof });
-    onP('prove', `  ✅ ${plan.circuitName}`);
+    disclosureProofs.push({ circuitName: disclosurePlans[i].circuitName, ...proof });
   }
   onP('outer', `Skipping on-device ${outerName}; package ready for server aggregation`);
 
   return {
     version: manifest.version,
     currentDate: currentDateTimestamp,
-    dsc: { circuitName: dscName, ...dscProof },
-    idData: { circuitName: idDataName, ...idProof },
-    integrity: { circuitName: integrityName, ...integrityProof },
+    dsc: dscProof,
+    idData: idProof,
+    integrity: integrityProof,
     disclosures: disclosureProofs,
   };
 }
@@ -351,15 +438,6 @@ export async function preloadRequestProofAssets(requestQuery: Query | null | und
   if (sizes.length > 0) {
     await timed('request.crs', () => ensureCrsFilesForCircuits(sizes, onP), `${sizes.length} circuits`);
   }
-}
-
-async function fetchAndProveInnerCircuit(registry: RegistryClient, manifest: any, name: string, inputs: Record<string, any>, onP: ProgressFn): Promise<OuterCircuitProof> {
-  const ch = manifest?.circuits?.[name]?.hash;
-  if (!ch) {throw new Error(`No circuit hash in manifest for ${name}`);}
-  onP('download', `Circuit ${name} (cache or network)...`);
-  const prepared = await timed(`circuit.ready.${name}`, () => ensurePreparedCircuit(registry, manifest, name), name);
-  onP('download', `  ${name} OK`);
-  return await proveInnerCircuit(name, prepared, inputs, manifest);
 }
 
 async function ensureManifest(registry: RegistryClient): Promise<any> {
@@ -415,12 +493,10 @@ async function ensurePreparedCircuit(registry: RegistryClient, manifest: any, na
   }
 
   const art = await ensurePackagedCircuit(registry, manifest, name);
-  const prepared = await timed(`circuit.decode.${name}`, async () => {
-    const bytecode = decompressBytecode(new Uint8Array(Buffer.from(art.bytecode, 'base64')));
+  const prepared = await timed(`circuit.prepare.${name}`, async () => {
     const vkey = new Uint8Array(Buffer.from(art.vkey, 'base64'));
     return {
       packaged: art,
-      bytecode,
       vkey,
       vkeyFields: ultraVkToFields(vkey),
       expectedPublicInputs: getNumberOfPublicInputsFromVkey(vkey),
@@ -430,30 +506,30 @@ async function ensurePreparedCircuit(registry: RegistryClient, manifest: any, na
   return prepared;
 }
 
-async function proveInnerCircuit(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>, manifest: any): Promise<OuterCircuitProof> {
-  const raw = await proveRawCircuit(name, prepared, inputs);
-  const tree = await computeCircuitMerkleProofForName(manifest, name);
-  return {
-    proof: raw.proof,
-    publicInputs: raw.publicInputs,
-    vkey: prepared.vkeyFields,
-    keyHash: prepared.packaged.vkey_hash,
-    treeHashPath: tree.path,
-    treeIndex: String(tree.index),
-  };
+/** Solve the compressed witness for a prepared circuit (used directly and by the prefetch pipeline). */
+function solveWitnessFor(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>): Promise<Uint8Array> {
+  return solveCompressedWitness({
+    bytecode: prepared.packaged.bytecode,
+    abi: prepared.packaged.abi,
+    debug_symbols: prepared.packaged.debug_symbols ?? '',
+    file_map: prepared.packaged.file_map && typeof prepared.packaged.file_map === 'object' ? prepared.packaged.file_map : {},
+    inputs,
+  });
 }
 
-async function proveRawCircuit(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>): Promise<{ proof: string[]; publicInputs: string[] }> {
-  let witness: Uint8Array | undefined;
+async function proveRawCircuit(name: string, prepared: PreparedCircuitArtifact, inputs: Record<string, any>, witnessOverride?: Uint8Array): Promise<{ proof: string[]; publicInputs: string[] }> {
+  let witness: Uint8Array | undefined = witnessOverride;
+  let bytecode: Uint8Array | undefined;
   try {
-    witness = await timed(`witness.${name}`, () => solveCompressedWitness({
-      bytecode: prepared.packaged.bytecode,
-      abi: prepared.packaged.abi,
-      debug_symbols: prepared.packaged.debug_symbols ?? '',
-      file_map: prepared.packaged.file_map && typeof prepared.packaged.file_map === 'object' ? prepared.packaged.file_map : {},
-      inputs,
-    }), name);
-    const result = await timed(`prove.${name}`, () => circuitProve(prepared.bytecode, witness!, prepared.vkey, name), name);
+    if (!witness) {
+      witness = await timed(`witness.${name}`, () => solveWitnessFor(name, prepared, inputs), name);
+    }
+    // Decompress the ~17 MiB program on demand (not cached) and release it right
+    // after proving so only the currently-proving circuit's bytecode is resident.
+    bytecode = await timed(`circuit.decode.${name}`, async () =>
+      decompressBytecode(new Uint8Array(Buffer.from(prepared.packaged.bytecode, 'base64'))), name);
+    const result = await timed(`prove.${name}`, () => circuitProve(bytecode!, witness!, prepared.vkey, name), name);
+    bytecode = new Uint8Array(0);
     const proof = (result.proof || []).map(toFieldHex);
     const publicInputs = (result.public_inputs || []).map(toFieldHex);
     if (prepared.expectedPublicInputs !== publicInputs.length) {
@@ -467,7 +543,47 @@ async function proveRawCircuit(name: string, prepared: PreparedCircuitArtifact, 
     throw new Error(`${name} failed: ${msg}`);
   } finally {
     if (witness) {witness = new Uint8Array(0);}
+    bytecode = undefined;
   }
+}
+
+/**
+ * Prove a list of inner circuits, overlapping the NEXT circuit's witness solve
+ * with the CURRENT circuit's bb prove (T2.8). The witness solver and bb run in
+ * different native modules, so witness(N+1) || prove(N) is safe (the witness
+ * single-flight guard only forbids two concurrent witness solves, and we never
+ * start one until the previous has been consumed). Proof order is preserved.
+ */
+async function proveInnerCircuitsPipelined(
+  items: Array<{ name: string; inputs: Record<string, any>; prepared: PreparedCircuitArtifact }>,
+  manifest: any,
+  onP: ProgressFn,
+): Promise<OuterCircuitProof[]> {
+  const results: OuterCircuitProof[] = [];
+  if (items.length === 0) {return results;}
+  let nextWitness: Promise<Uint8Array> = solveWitnessFor(items[0].name, items[0].prepared, items[0].inputs);
+  for (let i = 0; i < items.length; i++) {
+    const { name, inputs, prepared } = items[i];
+    const witness = await timed(`witness.${name}`, () => nextWitness, name);
+    // Kick off the next witness concurrently with this prove.
+    if (i + 1 < items.length) {
+      const nxt = items[i + 1];
+      nextWitness = solveWitnessFor(nxt.name, nxt.prepared, nxt.inputs);
+    }
+    onP('prove', `[${i + 1}/${items.length}] ${name}`);
+    const raw = await proveRawCircuit(name, prepared, inputs, witness);
+    const tree = await computeCircuitMerkleProofForName(manifest, name);
+    onP('prove', `  ✅ ${name}`);
+    results.push({
+      proof: raw.proof,
+      publicInputs: raw.publicInputs,
+      vkey: prepared.vkeyFields,
+      keyHash: prepared.packaged.vkey_hash,
+      treeHashPath: tree.path,
+      treeIndex: String(tree.index),
+    });
+  }
+  return results;
 }
 
 async function computeCircuitMerkleProofForName(manifest: any, name: string): Promise<{ path: string[]; index: number }> {
@@ -477,11 +593,10 @@ async function computeCircuitMerkleProofForName(manifest: any, name: string): Pr
   if (cached) {
     return cached;
   }
-  const proof = await timed(`merkle.${name}`, () => getCircuitMerkleProof(circuitHash, manifest), name);
-  const normalized = {
-    path: proof.path.map((x: any) => (typeof x === 'string' ? x : `0x${BigInt(x).toString(16).padStart(64, '0')}`)),
-    index: proof.index,
-  };
+  // Builds the registry tree once per manifest (cached in circuitMerkle), then
+  // O(depth) per circuit; self-checked against the SDK so paths can't be wrong.
+  const proof = await timed(`merkle.${name}`, () => circuitMerkleProof(manifest, String(circuitHash)), name);
+  const normalized = { path: proof.path, index: proof.index };
   sessionMerkleProofCache.set(String(circuitHash), normalized);
   return normalized;
 }
@@ -836,6 +951,7 @@ async function deriveCircuitNames(passport: any, packagedCerts: any, manifest: a
     idDataName,
     integrityName,
     outerName,
+    csca,
     debug: {
       dsc: `${csca.signature_algorithm}/${csca.public_key.type}/${csca.public_key.type === 'EC' ? csca.public_key.curve : csca.public_key.key_size}/${dscHash}`,
       id: `${sodSigAlg.includes('ecdsa') ? 'ECDSA' : sodSigAlg.includes('pss') ? 'RSA-PSS' : 'RSA-PKCS'}/${sodHash}`,

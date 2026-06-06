@@ -187,3 +187,6 @@ GoogleService-Info.plist
 
 *.log
 logs/
+
+# Bundled inner CRS (fetched at build time when BUNDLE_INNER_CRS=true)
+android/app/src/main/assets/bb-crs/

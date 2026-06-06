@@ -1,4 +1,5 @@
 /* eslint-disable no-bitwise -- CRS size alignment uses power-of-two bit shifts */
+import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 
 const CRS_BASE_URL = 'https://crs.aztec.network';
@@ -26,6 +27,26 @@ async function ensureDir(): Promise<string> {
   const exists = await RNFS.exists(dir);
   if (!exists) {await RNFS.mkdir(dir);}
   return dir;
+}
+
+// If the build bundled an inner CRS under android assets (bb-crs/*), copy it to
+// the on-disk CRS dir on first run so a fresh install needs no network download.
+// Native copy (copyFileAssets) — no JS heap. No-op if not bundled / not Android.
+async function seedFromBundledAssets(dir: string, onP: ProgressFn): Promise<void> {
+  if (Platform.OS !== 'android') {return;}
+  const rnfs = RNFS as any;
+  if (typeof rnfs.copyFileAssets !== 'function') {return;}
+  for (const f of ['bn254_g1.dat', 'bn254_g2.dat', 'grumpkin_g1.flat.dat']) {
+    const dest = `${dir}/${f}`;
+    try {
+      if ((await fileSize(dest)) > 0) {continue;} // already on disk
+      if (typeof rnfs.existsAssets === 'function' && !(await rnfs.existsAssets(`bb-crs/${f}`))) {continue;}
+      await rnfs.copyFileAssets(`bb-crs/${f}`, dest);
+      onP('crs', `Seeded ${f} from bundled assets (${await fileSize(dest)} bytes)`);
+    } catch {
+      // No bundled asset in this build -> fall through to network download.
+    }
+  }
 }
 
 async function fileSize(path: string): Promise<number> {
@@ -236,6 +257,7 @@ async function downloadRangeOrWhole(url: string, dest: string, bytesNeeded: numb
 
 export async function ensureCrsFilesForCircuits(circuitSizes: number[], onP: ProgressFn): Promise<string> {
   const dir = await ensureDir();
+  await seedFromBundledAssets(dir, onP);
   onP('crs', `Manifest circuit sizes: ${circuitSizes.join(',')}`);
   const maxCircuitSize = Math.max(1, ...circuitSizes.filter((x) => Number.isFinite(x) && x > 0));
   const bn254Points = nextPowerOfTwo(maxCircuitSize) + 1;
@@ -257,9 +279,13 @@ export async function ensureCrsFilesForCircuits(circuitSizes: number[], onP: Pro
     return dir;
   }
 
-  await downloadRangeOrWhole(`${CRS_BASE_URL}/g1.dat`, g1Path, g1Need, onP, 'bn254_g1.dat');
-  await downloadWhole(`${CRS_BASE_URL}/g2.dat`, g2Path, onP, 'bn254_g2.dat');
-  await downloadRangeOrWhole(`${CRS_BASE_URL}/grumpkin_g1.dat`, gkPath, gkNeed, onP, 'grumpkin_g1.flat.dat');
+  // Download the three CRS files concurrently (different files/URLs); each is a
+  // no-op if already satisfied on disk. ~halves the cold first-run CRS wait.
+  await Promise.all([
+    downloadRangeOrWhole(`${CRS_BASE_URL}/g1.dat`, g1Path, g1Need, onP, 'bn254_g1.dat'),
+    downloadWhole(`${CRS_BASE_URL}/g2.dat`, g2Path, onP, 'bn254_g2.dat'),
+    downloadRangeOrWhole(`${CRS_BASE_URL}/grumpkin_g1.dat`, gkPath, gkNeed, onP, 'grumpkin_g1.flat.dat'),
+  ]);
 
   return dir;
 }

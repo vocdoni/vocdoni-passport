@@ -37,6 +37,11 @@ void configure_runtime_profile(uint64_t total_mem_bytes, int cpu_count)
 
     if (!low_memory) {
         slow_low_memory = false;
+        // Cap bb at the big-core count, NOT all cores. Device testing showed bb's
+        // UltraHonk prove does not scale past ~4 threads on 8-core big.LITTLE
+        // phones (8 threads == 4 threads for prove), and using all cores starves
+        // the on-device witness solver that runs concurrently (T2.8 pipeline) —
+        // leaving cores free for it is a net win over a no-op thread bump.
         if (effective_mem >= (6ULL * ONE_GIB)) {
             worker_threads = std::min(effective_cpus, 4);
             storage_budget_str = "192m";
